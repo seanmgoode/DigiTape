@@ -1,6 +1,12 @@
 import Foundation
-import CoreBluetooth
+@preconcurrency import CoreBluetooth
 import SwiftUI
+
+private enum DigiTapeBLEUUID {
+    static let service = CBUUID(string: "6f8a1500-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
+    static let distance = CBUUID(string: "6f8a1501-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
+    static let settings = CBUUID(string: "6f8a1502-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
+}
 
 @MainActor
 final class DigiTapeBLEManager: NSObject, ObservableObject {
@@ -26,10 +32,6 @@ final class DigiTapeBLEManager: NSObject, ObservableObject {
     private var distanceCharacteristic: CBCharacteristic?
     private var settingsCharacteristic: CBCharacteristic?
     private var rssiTimer: Timer?
-
-    private let serviceUUID = CBUUID(string: "6f8a1500-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
-    private let distanceUUID = CBUUID(string: "6f8a1501-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
-    private let settingsUUID = CBUUID(string: "6f8a1502-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
 
     override init() {
         super.init()
@@ -78,7 +80,7 @@ final class DigiTapeBLEManager: NSObject, ObservableObject {
         guard isBluetoothReady else { return }
         status = "Scanning for DigiTape-TX..."
         isScanning = true
-        central.scanForPeripherals(withServices: [serviceUUID], options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
+        central.scanForPeripherals(withServices: [DigiTapeBLEUUID.service], options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
     }
 
     func stopScan() {
@@ -137,7 +139,7 @@ extension DigiTapeBLEManager: CBCentralManagerDelegate {
         Task { @MainActor in
             self.isConnected = true
             self.status = "Connected"
-            peripheral.discoverServices([self.serviceUUID])
+            peripheral.discoverServices([DigiTapeBLEUUID.service])
             self.rssiTimer?.invalidate()
             self.rssiTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak peripheral] _ in
                 peripheral?.readRSSI()
@@ -159,7 +161,7 @@ extension DigiTapeBLEManager: CBPeripheralDelegate {
     nonisolated func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard let services = peripheral.services else { return }
         for service in services {
-            peripheral.discoverCharacteristics([distanceUUID, settingsUUID], for: service)
+            peripheral.discoverCharacteristics([DigiTapeBLEUUID.distance, DigiTapeBLEUUID.settings], for: service)
         }
     }
 
@@ -167,10 +169,10 @@ extension DigiTapeBLEManager: CBPeripheralDelegate {
         Task { @MainActor in
             guard let characteristics = service.characteristics else { return }
             for characteristic in characteristics {
-                if characteristic.uuid == self.distanceUUID {
+                if characteristic.uuid == DigiTapeBLEUUID.distance {
                     self.distanceCharacteristic = characteristic
                     peripheral.setNotifyValue(true, for: characteristic)
-                } else if characteristic.uuid == self.settingsUUID {
+                } else if characteristic.uuid == DigiTapeBLEUUID.settings {
                     self.settingsCharacteristic = characteristic
                     self.sendSettings()
                 }
@@ -179,7 +181,7 @@ extension DigiTapeBLEManager: CBPeripheralDelegate {
     }
 
     nonisolated func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        guard characteristic.uuid == distanceUUID, let data = characteristic.value, let packet = DistancePacket(data: data) else { return }
+        guard characteristic.uuid == DigiTapeBLEUUID.distance, let data = characteristic.value, let packet = DistancePacket(data: data) else { return }
         Task { @MainActor in
             self.distanceCM = packet.distanceCM
             self.errorFlag = packet.errorFlag
