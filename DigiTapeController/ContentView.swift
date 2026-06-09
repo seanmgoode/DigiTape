@@ -120,8 +120,8 @@ struct RXConsoleView: View {
                 ble.startLiveMode()
             }
         case (.home, .k3):
-            sourceIsTag = false
-            ble.startEmulatorMode()
+            screen = .menu
+            menuIndex = 0
         case (.home, .k4):
             screen = .menu
             menuIndex = 0
