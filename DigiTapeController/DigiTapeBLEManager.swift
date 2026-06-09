@@ -8,6 +8,11 @@ private enum DigiTapeBLEUUID {
     static let settings = CBUUID(string: "6f8a1502-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
 }
 
+private enum DigiTapeBLETarget {
+    static let displayName = "DigiTape-RX"
+    static let acceptedNames = ["DigiTape-RX", "DigiTape RX", "DigiTapeRX"]
+}
+
 @MainActor
 final class DigiTapeBLEManager: NSObject, ObservableObject {
     @Published var isBluetoothReady = false
@@ -78,7 +83,7 @@ final class DigiTapeBLEManager: NSObject, ObservableObject {
 
     func scan() {
         guard isBluetoothReady else { return }
-        status = "Scanning for DigiTape-TX..."
+        status = "Scanning for \(DigiTapeBLETarget.displayName)..."
         isScanning = true
         central.scanForPeripherals(withServices: [DigiTapeBLEUUID.service], options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
     }
@@ -125,9 +130,18 @@ extension DigiTapeBLEManager: CBCentralManagerDelegate {
     }
 
     nonisolated func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
+        let advertisedName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
+        let deviceName = advertisedName ?? peripheral.name ?? ""
+        let isRX = DigiTapeBLETarget.acceptedNames.contains { deviceName.localizedCaseInsensitiveContains($0) }
+
         Task { @MainActor in
+            guard isRX else {
+                self.status = "Ignoring \(deviceName.isEmpty ? "unknown DigiTape device" : deviceName)"
+                return
+            }
+
             self.rssi = RSSI.intValue
-            self.status = "Found DigiTape-TX"
+            self.status = "Found \(DigiTapeBLETarget.displayName)"
             self.peripheral = peripheral
             self.peripheral?.delegate = self
             self.stopScan()

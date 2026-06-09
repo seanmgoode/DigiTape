@@ -179,7 +179,7 @@ struct RXMenuHostView: View {
                         get: { ble.emulatorMode },
                         set: { $0 ? ble.startEmulatorMode() : ble.startLiveMode() }
                     ))
-                    Button(ble.isScanning ? "Scanning..." : "Connect to DigiTape-TX") {
+                    Button(ble.isScanning ? "Scanning..." : "Connect to DigiTape-RX") {
                         ble.startLiveMode()
                     }
                     .disabled(!ble.emulatorMode && ble.isScanning)
