@@ -37,6 +37,7 @@ struct RXConsoleView: View {
     @State private var screen: RXScreen = .home
     @State private var menuIndex = 0
     @State private var sourceIsTag = false
+    @State private var requestedAutoConnect = false
 
     private let menuItems: [(String, RXScreen)] = [
         ("Offset", .offset),
@@ -47,40 +48,62 @@ struct RXConsoleView: View {
     ]
 
     var body: some View {
-        VStack(spacing: 16) {
-            OLEDDisplay(
-                ble: ble,
-                screen: screen,
-                menuIndex: menuIndex,
-                menuItems: menuItems.map(\.0),
-                sourceIsTag: sourceIsTag
-            )
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-
-            SoftKeyPad(
-                labels: labels,
-                onK1: { handle(.k1) },
-                onK2: { handle(.k2) },
-                onK3: { handle(.k3) },
-                onK4: { handle(.k4) }
-            )
-            .padding(.horizontal, 16)
-
-            Spacer(minLength: 0)
+        GeometryReader { geo in
+            let landscape = geo.size.width > geo.size.height
+            Group {
+                if landscape {
+                    HStack(spacing: 18) {
+                        lcd
+                            .frame(maxWidth: .infinity)
+                        ArrowKeyColumn(
+                            onUp: { handle(.k1) },
+                            onDown: { handle(.k2) },
+                            onForward: { handle(.k3) },
+                            onBack: { handle(.k4) }
+                        )
+                        .frame(width: 74)
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                } else {
+                    VStack(spacing: 14) {
+                        lcd
+                        ArrowKeyColumn(
+                            onUp: { handle(.k1) },
+                            onDown: { handle(.k2) },
+                            onForward: { handle(.k3) },
+                            onBack: { handle(.k4) }
+                        )
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
         }
         .background(Color(.systemBackground))
+        .onAppear { autoConnectIfNeeded() }
+        .onChange(of: ble.isBluetoothReady) { _, _ in autoConnectIfNeeded() }
     }
 
-    private var labels: [String] {
-        switch screen {
-        case .home: return ["SRC", ble.isConnected && !ble.emulatorMode ? "DISC" : "LIVE", "EMU", "MENU"]
-        case .menu: return ["UP", "DN", "SEL", "BACK"]
-        case .offset: return ["+1", "-1", "SAVE", "BACK"]
-        case .mode: return ["NEXT", "PREV", "SAVE", "BACK"]
-        case .tag: return ["TX", "TAG", "", "BACK"]
-        case .diagnostics, .about: return ["", "", "", "BACK"]
-        }
+    private var lcd: some View {
+        OLEDDisplay(
+            ble: ble,
+            screen: screen,
+            menuIndex: menuIndex,
+            menuItems: menuItems.map(\.0),
+            sourceIsTag: sourceIsTag
+        )
+    }
+
+    private func autoConnectIfNeeded() {
+        guard !requestedAutoConnect else { return }
+        guard !ble.isConnected, !ble.isScanning else { return }
+        guard ble.isBluetoothReady else { return }
+        requestedAutoConnect = true
+        sourceIsTag = false
+        ble.startLiveMode()
     }
 
     private enum Key { case k1, k2, k3, k4 }
@@ -409,35 +432,28 @@ struct OLEDDisplay: View {
     }
 }
 
-struct SoftKeyPad: View {
-    let labels: [String]
-    let onK1: () -> Void
-    let onK2: () -> Void
-    let onK3: () -> Void
-    let onK4: () -> Void
+struct ArrowKeyColumn: View {
+    let onUp: () -> Void
+    let onDown: () -> Void
+    let onForward: () -> Void
+    let onBack: () -> Void
 
     var body: some View {
-        Grid(horizontalSpacing: 10, verticalSpacing: 10) {
-            GridRow {
-                key(labels[safe: 0] ?? "", action: onK1)
-                key(labels[safe: 1] ?? "", action: onK2)
-            }
-            GridRow {
-                key(labels[safe: 2] ?? "", action: onK3)
-                key(labels[safe: 3] ?? "", action: onK4)
-            }
+        VStack(spacing: 8) {
+            key("arrow.up", action: onUp)
+            key("arrow.down", action: onDown)
+            key("arrow.right", action: onForward)
+            key("arrow.left", action: onBack)
         }
     }
 
-    private func key(_ label: String, action: @escaping () -> Void) -> some View {
+    private func key(_ systemName: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(label.isEmpty ? " " : label)
-                .font(.system(.title3, design: .monospaced).weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 56)
+            Image(systemName: systemName)
+                .font(.system(size: 21, weight: .bold))
+                .frame(width: 58, height: 42)
         }
         .buttonStyle(.borderedProminent)
-        .disabled(label.isEmpty)
-        .opacity(label.isEmpty ? 0.35 : 1)
     }
 }
 
