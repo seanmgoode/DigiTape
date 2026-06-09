@@ -167,7 +167,3 @@ struct BatteryIcon: View {
         }
     }
 }
-
-#Preview {
-    ContentView()
-}
