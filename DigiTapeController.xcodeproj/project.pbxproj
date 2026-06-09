@@ -22,6 +22,16 @@
 		A20000000000000000000006 /* DigiTapeController.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DigiTapeController.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFrameworksBuildPhase section */
+		A50000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXGroup section */
 		A30000000000000000000001 = {
 			isa = PBXGroup;
@@ -104,16 +114,6 @@
 		};
 /* End PBXProject section */
 
-/* Begin PBXFrameworksBuildPhase section */
-		A50000000000000000000002 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXFrameworksBuildPhase section */
-
 /* Begin PBXResourcesBuildPhase section */
 		A50000000000000000000003 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
@@ -192,7 +192,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 5P7P2UTW9S;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DigiTapeController/Info.plist;
 				MARKETING_VERSION = 2.0.2;
@@ -211,7 +211,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 5P7P2UTW9S;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DigiTapeController/Info.plist;
 				MARKETING_VERSION = 2.0.2;
