@@ -1,0 +1,70 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		000000000000000000000065 /* DigiTapeControllerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000001 /* DigiTapeControllerApp.swift */; };
+		000000000000000000000066 /* DigiTapeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000002 /* DigiTapeModels.swift */; };
+		000000000000000000000067 /* DigiTapeBLEManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000003 /* DigiTapeBLEManager.swift */; };
+		000000000000000000000068 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000004 /* ContentView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		000000000000000000000006 /* DigiTapeController.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DigiTapeController.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000001 /* DigiTapeControllerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DigiTapeControllerApp.swift; sourceTree = "<group>"; };
+		000000000000000000000002 /* DigiTapeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DigiTapeModels.swift; sourceTree = "<group>"; };
+		000000000000000000000003 /* DigiTapeBLEManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DigiTapeBLEManager.swift; sourceTree = "<group>"; };
+		000000000000000000000004 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		000000000000000000000005 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		000000000000000000000002 = {isa = PBXGroup; children = ( 000000000000000000000007 /* DigiTapeController */, 000000000000000000000008 /* Products */, ); sourceTree = "<group>"; };
+		000000000000000000000007 /* DigiTapeController */ = {isa = PBXGroup; children = (
+				000000000000000000000001 /* DigiTapeControllerApp.swift */,
+				000000000000000000000002 /* DigiTapeModels.swift */,
+				000000000000000000000003 /* DigiTapeBLEManager.swift */,
+				000000000000000000000004 /* ContentView.swift */,
+				000000000000000000000005 /* Info.plist */,
+			); path = DigiTapeController; sourceTree = "<group>"; };
+		000000000000000000000008 /* Products */ = {isa = PBXGroup; children = ( 000000000000000000000006 /* DigiTapeController.app */, ); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		000000000000000000000003 /* DigiTapeController */ = {isa = PBXNativeTarget; buildConfigurationList = 00000000000000000000000C /* Build configuration list for PBXNativeTarget "DigiTapeController" */; buildPhases = ( 000000000000000000000004 /* Sources */, 000000000000000000000005 /* Resources */, ); buildRules = ( ); dependencies = ( ); name = DigiTapeController; productName = DigiTapeController; productReference = 000000000000000000000006 /* DigiTapeController.app */; productType = "com.apple.product-type.application"; };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000000000000001 /* Project object */ = {isa = PBXProject; attributes = { LastSwiftUpdateCheck = 1600; LastUpgradeCheck = 1600; TargetAttributes = { 000000000000000000000003 = { CreatedOnToolsVersion = 16.0; }; }; }; buildConfigurationList = 000000000000000000000009 /* Build configuration list for PBXProject "DigiTapeController" */; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = ( en, Base, ); mainGroup = 000000000000000000000002; productRefGroup = 000000000000000000000008 /* Products */; projectDirPath = ""; projectRoot = ""; targets = ( 000000000000000000000003 /* DigiTapeController */, ); };
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		000000000000000000000005 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = ( ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		000000000000000000000004 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (
+				000000000000000000000065 /* DigiTapeControllerApp.swift in Sources */,
+				000000000000000000000066 /* DigiTapeModels.swift in Sources */,
+				000000000000000000000067 /* DigiTapeBLEManager.swift in Sources */,
+				000000000000000000000068 /* ContentView.swift in Sources */,
+			); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		00000000000000000000000A /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ANALYZER_NONNULL = YES; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; CLANG_WARN_DOCUMENTATION_COMMENTS = YES; CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_STRICT_OBJC_MSGSEND = YES; ENABLE_TESTABILITY = YES; GCC_C_LANGUAGE_STANDARD = gnu17; GCC_DYNAMIC_NO_PIC = NO; GCC_OPTIMIZATION_LEVEL = 0; GCC_PREPROCESSOR_DEFINITIONS = ( "DEBUG=1", "$(inherited)", ); IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; }; name = Debug; };
+		00000000000000000000000B /* Release */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ANALYZER_NONNULL = YES; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; CLANG_WARN_DOCUMENTATION_COMMENTS = YES; CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES; COPY_PHASE_STRIP = NO; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; ENABLE_NS_ASSERTIONS = NO; ENABLE_STRICT_OBJC_MSGSEND = YES; GCC_C_LANGUAGE_STANDARD = gnu17; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_OPTIMIZATION_LEVEL = "-O"; VALIDATE_PRODUCT = YES; }; name = Release; };
+		00000000000000000000000D /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = DigiTapeController/Info.plist; MARKETING_VERSION = 2.0.2; PRODUCT_BUNDLE_IDENTIFIER = com.digitape.controller; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; }; name = Debug; };
+		00000000000000000000000E /* Release */ = {isa = XCBuildConfiguration; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = DigiTapeController/Info.plist; MARKETING_VERSION = 2.0.2; PRODUCT_BUNDLE_IDENTIFIER = com.digitape.controller; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		000000000000000000000009 /* Build configuration list for PBXProject "DigiTapeController" */ = {isa = XCConfigurationList; buildConfigurations = ( 00000000000000000000000A /* Debug */, 00000000000000000000000B /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		00000000000000000000000C /* Build configuration list for PBXNativeTarget "DigiTapeController" */ = {isa = XCConfigurationList; buildConfigurations = ( 00000000000000000000000D /* Debug */, 00000000000000000000000E /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+	};
+	rootObject = 000000000000000000000001 /* Project object */;
+}
