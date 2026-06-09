@@ -70,16 +70,11 @@ struct RXConsoleView: View {
             Spacer(minLength: 0)
         }
         .background(Color(.systemBackground))
-        .onAppear {
-            if ble.emulatorMode {
-                ble.startEmulatorMode()
-            }
-        }
     }
 
     private var labels: [String] {
         switch screen {
-        case .home: return ["SRC", "", "", "MENU"]
+        case .home: return ["SRC", "LIVE", "EMU", "MENU"]
         case .menu: return ["UP", "DN", "SEL", "BACK"]
         case .offset: return ["+1", "-1", "SAVE", "BACK"]
         case .mode: return ["NEXT", "PREV", "SAVE", "BACK"]
@@ -94,6 +89,12 @@ struct RXConsoleView: View {
         switch (screen, key) {
         case (.home, .k1):
             sourceIsTag.toggle()
+        case (.home, .k2):
+            sourceIsTag = false
+            ble.startLiveMode()
+        case (.home, .k3):
+            sourceIsTag = false
+            ble.startEmulatorMode()
         case (.home, .k4):
             screen = .menu
             menuIndex = 0
