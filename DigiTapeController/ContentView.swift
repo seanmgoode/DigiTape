@@ -74,7 +74,7 @@ struct RXConsoleView: View {
 
     private var labels: [String] {
         switch screen {
-        case .home: return ["SRC", "LIVE", "EMU", "MENU"]
+        case .home: return ["SRC", ble.isConnected && !ble.emulatorMode ? "DISC" : "LIVE", "EMU", "MENU"]
         case .menu: return ["UP", "DN", "SEL", "BACK"]
         case .offset: return ["+1", "-1", "SAVE", "BACK"]
         case .mode: return ["NEXT", "PREV", "SAVE", "BACK"]
@@ -91,7 +91,11 @@ struct RXConsoleView: View {
             sourceIsTag.toggle()
         case (.home, .k2):
             sourceIsTag = false
-            ble.startLiveMode()
+            if ble.isConnected && !ble.emulatorMode {
+                ble.disconnect()
+            } else {
+                ble.startLiveMode()
+            }
         case (.home, .k3):
             sourceIsTag = false
             ble.startEmulatorMode()
