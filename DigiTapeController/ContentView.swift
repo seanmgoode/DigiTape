@@ -31,7 +31,7 @@ struct RXConsoleView: View {
         ("Offset", .offset),
         ("Mode", .mode),
         ("Tag", .tag),
-        ("Diagnostics", .diagnostics),
+        ("Settings", .diagnostics),
         ("About", .about)
     ]
 
@@ -113,7 +113,7 @@ struct RXConsoleView: View {
 
         var title: String {
             switch self {
-            case .diagnostics: return "Diag"
+            case .diagnostics: return "Set"
             }
         }
 
@@ -803,14 +803,6 @@ struct DiagnosticsView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Link") {
-                    diagRow("State", ble.linkOK ? "Live" : "No data")
-                    diagRow("Status", ble.status)
-                    diagRow("Route", ble.connectionRoute)
-                    diagRow("RSSI", "\(ble.rssi) dBm")
-                    diagRow("Signal", "\(ble.signalPercent)%")
-                }
-
                 Section("Firmware Update") {
                     Picker("Target", selection: $firmwareTarget) {
                         Label("RX", systemImage: "display").tag("RX")
@@ -860,9 +852,13 @@ struct DiagnosticsView: View {
                     }
                 }
 
-                Section("Packet") {
+                Section("Connection") {
+                    diagRow("Route", ble.connectionRoute)
+                    diagRow("State", ble.linkOK ? "Live" : "No data")
+                    diagRow("Status", ble.status)
+                    diagRow("Signal", "\(ble.signalPercent)%")
+                    diagRow("RSSI", "\(ble.rssi) dBm")
                     diagRow("Sensor", ble.sensorType.label)
-                    diagRow("Mode", ble.responseMode.label)
                     diagRow("Packet", "\(ble.packetCounter)")
                 }
 
@@ -877,7 +873,7 @@ struct DiagnosticsView: View {
                     Slider(value: $ble.emulatorSignal, in: 0...100, step: 1)
                 }
             }
-            .navigationTitle("Diagnostics")
+            .navigationTitle("Settings")
             .fileImporter(isPresented: $showingFirmwareImporter, allowedContentTypes: [.data], allowsMultipleSelection: false) { result in
                 guard case .success(let urls) = result, let url = urls.first else { return }
                 let accessing = url.startAccessingSecurityScopedResource()

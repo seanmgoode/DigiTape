@@ -7,12 +7,12 @@ Current app project: **DigiTape iOS Controller 2.0.2**
 - **Home** shows the current distance and the active route, `RX` or `TX`.
 - **RX route** connects to `DigiTape-RX`, the normal bridge path where RX stays paired to TX.
 - **TX route** connects directly to `DigiTape-TX` for direct control or TX OTA updates.
-- **Diagnostics** shows link state, route, RSSI, packet details, installed firmware, and OTA controls.
+- **Settings** shows firmware updates, connection state, route, RSSI, sensor, packet count, and emulator controls.
 - **Emulator** is for app testing without hardware.
 
 ## OTA Updates
 
-Use Diagnostics > Firmware Update.
+Use Settings > Firmware Update.
 
 - To update RX, connect to RX and choose `INSTALL_DigiTape_RX_2_0_7.ino.bin`.
 - To update TX, tap `Connect to TX`, wait for route `TX`, then choose `INSTALL_DigiTape_TX_2_0_6.ino.bin`.
@@ -36,7 +36,7 @@ Use Diagnostics > Firmware Update.
 
 ## Cloud Firmware
 
-The app can check an HTTPS firmware manifest, show available RX/TX firmware, download the selected `.ino.bin`, and start OTA from Diagnostics.
+The app can check an HTTPS firmware manifest, show available RX/TX firmware, download the selected `.ino.bin`, and start OTA from Settings.
 
 Manifest format example:
 
