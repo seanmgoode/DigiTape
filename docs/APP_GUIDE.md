@@ -14,15 +14,15 @@ Current app project: **DigiTape iOS Controller 2.0.2**
 
 Use Settings > Firmware Update.
 
-- To update RX, connect to RX and choose `INSTALL_DigiTape_RX_2_0_7.ino.bin`.
-- To update TX, tap `Connect to TX`, wait for route `TX`, then choose `INSTALL_DigiTape_TX_2_0_6.ino.bin`.
+- To update RX, connect to RX and choose `INSTALL_DigiTape_RX_2_0_8.ino.bin`.
+- To update TX, tap `Connect to TX`, wait for route `TX`, then choose `INSTALL_DigiTape_TX_2_0_7.ino.bin`.
 - Use `.ino.bin` files for app OTA.
 - Use `.merged.bin` files only for full USB flashing.
 
 ## Expected Firmware
 
-- RX: `2.0.7`
-- TX: `2.0.6`
+- RX: `2.0.8`
+- TX: `2.0.7`
 
 ## BLE UUIDs
 
