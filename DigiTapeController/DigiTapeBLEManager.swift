@@ -85,6 +85,7 @@ final class DigiTapeBLEManager: NSObject, ObservableObject {
     private var otaOffset = 0
     private var otaWaitingForBeginAck = false
     private var otaWaitingForEndAck = false
+    private var otaStartedAt: Date?
     private let otaChunkSize = 180
     private let rxReleaseTXCommand: UInt8 = 1
     private var manualTXRouteUntil: Date?
@@ -264,6 +265,7 @@ func downloadAndUpdateFirmware(for route: String? = nil) {
         otaInProgress = true
         otaWaitingForBeginAck = true
         otaWaitingForEndAck = false
+        otaStartedAt = Date()
         otaStatus = "Starting \(filename)"
 
         var command = Data([1])
@@ -568,6 +570,12 @@ extension DigiTapeBLEManager: CBPeripheralDelegate {
             }
         }
     }
+
+    nonisolated func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
+        Task { @MainActor in
+            self.sendOTAChunks()
+        }
+    }
 }
 
 private extension DigiTapeBLETarget {
@@ -685,6 +693,7 @@ func clearOTAState(resetStatus: Bool) {
     otaOffset = 0
     otaWaitingForBeginAck = false
     otaWaitingForEndAck = false
+    otaStartedAt = nil
     if resetStatus {
         otaStatus = "OTA idle"
     }
@@ -697,41 +706,51 @@ func handleOTAWritableAck(for characteristic: CBCharacteristic, error: Error?) {
         return
     }
 
-    if characteristic.uuid == DigiTapeBLEUUID.otaControl {
-        if otaWaitingForBeginAck {
-            otaWaitingForBeginAck = false
-            sendNextOTAChunk()
-        } else if otaWaitingForEndAck {
-            otaWaitingForEndAck = false
-            otaInProgress = false
-            otaProgress = 1
-            otaPayload = Data()
-            otaStatus = "OTA sent, rebooting"
-        }
-        return
-    }
+    guard characteristic.uuid == DigiTapeBLEUUID.otaControl else { return }
 
-    if characteristic.uuid == DigiTapeBLEUUID.otaData {
-        otaProgress = otaPayload.isEmpty ? 0 : Double(otaOffset) / Double(otaPayload.count)
-        sendNextOTAChunk()
+    if otaWaitingForBeginAck {
+        otaWaitingForBeginAck = false
+        sendOTAChunks()
+    } else if otaWaitingForEndAck {
+        otaWaitingForEndAck = false
+        otaInProgress = false
+        otaProgress = 1
+        otaPayload = Data()
+        otaStartedAt = nil
+        otaStatus = "OTA sent, rebooting"
     }
 }
 
-func sendNextOTAChunk() {
-    guard otaInProgress, let peripheral, let otaDataCharacteristic, let otaControlCharacteristic else { return }
+func otaTransferStatusText() -> String {
+    guard let otaStartedAt else {
+        return "Sending \(Int(otaProgress * 100))%"
+    }
+
+    let elapsed = max(0.1, Date().timeIntervalSince(otaStartedAt))
+    let kbPerSecond = Double(otaOffset) / 1024.0 / elapsed
+    return String(format: "Sending %d%% %.1f KB/s", Int(otaProgress * 100), kbPerSecond)
+}
+
+func sendOTAChunks() {
+    guard otaInProgress, !otaWaitingForBeginAck, !otaWaitingForEndAck,
+          let peripheral, let otaDataCharacteristic, let otaControlCharacteristic else { return }
+
+    while otaOffset < otaPayload.count, peripheral.canSendWriteWithoutResponse {
+        let maxWriteLength = peripheral.maximumWriteValueLength(for: .withoutResponse)
+        let chunkSize = min(otaChunkSize, max(20, maxWriteLength))
+        let end = min(otaOffset + chunkSize, otaPayload.count)
+        let chunk = otaPayload.subdata(in: otaOffset..<end)
+        otaOffset = end
+        otaProgress = Double(otaOffset) / Double(otaPayload.count)
+        otaStatus = otaTransferStatusText()
+        peripheral.writeValue(chunk, for: otaDataCharacteristic, type: .withoutResponse)
+    }
 
     if otaOffset >= otaPayload.count {
         otaWaitingForEndAck = true
         otaStatus = "Finishing OTA"
         peripheral.writeValue(Data([2]), for: otaControlCharacteristic, type: .withResponse)
-        return
     }
-
-    let end = min(otaOffset + otaChunkSize, otaPayload.count)
-    let chunk = otaPayload.subdata(in: otaOffset..<end)
-    otaOffset = end
-    otaStatus = "Sending \(Int(otaProgress * 100))%"
-    peripheral.writeValue(chunk, for: otaDataCharacteristic, type: .withResponse)
 }
 
     func startPacketFreshnessTimer() {
