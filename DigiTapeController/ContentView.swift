@@ -820,6 +820,7 @@ struct DiagnosticsView: View {
                     .disabled(ble.otaInProgress)
 
                     diagRow("Status", firmwareStatusText)
+                    diagRow("Installed", ble.installedFirmwareVersion(for: firmwareTarget))
                     ProgressView(value: ble.otaProgress)
                         .opacity(ble.otaInProgress ? 1 : 0.35)
 
@@ -863,7 +864,6 @@ struct DiagnosticsView: View {
                     diagRow("Sensor", ble.sensorType.label)
                     diagRow("Mode", ble.responseMode.label)
                     diagRow("Packet", "\(ble.packetCounter)")
-                    diagRow("TX FW", ble.txVersion)
                 }
 
                 Section("Emulator") {
