@@ -277,6 +277,20 @@ func downloadAndUpdateFirmware(for route: String? = nil) {
         otaStatus = "OTA aborted"
     }
 
+func switchConnectionRoute(to route: String) {
+    let normalized = route.uppercased()
+    guard normalized == "RX" || normalized == "TX" else { return }
+    if connectionRoute == normalized { return }
+
+    if normalized == "TX" {
+        if connectedTarget == .rx || scanTarget == .rx || !isConnected {
+            switchConnectionRoute()
+        }
+    } else if connectedTarget == .tx || scanTarget == .tx || !isConnected {
+        switchConnectionRoute()
+    }
+}
+
 func switchConnectionRoute() {
     wantsLiveConnection = true
     emulatorMode = false

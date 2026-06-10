@@ -786,9 +786,19 @@ struct EmulatorView: View {
         }
     }
 }
+
 struct DiagnosticsView: View {
     @ObservedObject var ble: DigiTapeBLEManager
     @State private var showingFirmwareImporter = false
+    @State private var firmwareTarget = "RX"
+
+    private var selectedFirmware: FirmwareManifest.FirmwareFile? {
+        ble.availableFirmware.first { $0.target.caseInsensitiveCompare(firmwareTarget) == .orderedSame }
+    }
+
+    private var isSelectedRouteConnected: Bool {
+        ble.connectionRoute == firmwareTarget
+    }
 
     var body: some View {
         NavigationStack {
@@ -802,23 +812,45 @@ struct DiagnosticsView: View {
                 }
 
                 Section("Firmware Update") {
-                    diagRow("OTA", ble.otaStatus)
-                    diagRow("Cloud", ble.cloudFirmwareStatus)
+                    Picker("Target", selection: $firmwareTarget) {
+                        Label("RX", systemImage: "display").tag("RX")
+                        Label("TX", systemImage: "antenna.radiowaves.left.and.right").tag("TX")
+                    }
+                    .pickerStyle(.segmented)
+                    .disabled(ble.otaInProgress)
+
+                    diagRow("Status", firmwareStatusText)
                     ProgressView(value: ble.otaProgress)
                         .opacity(ble.otaInProgress ? 1 : 0.35)
 
                     Button {
                         ble.checkCloudFirmware()
                     } label: {
-                        Label("Check Cloud Firmware", systemImage: "icloud.and.arrow.down")
+                        Label(ble.availableFirmware.isEmpty ? "Check for Updates" : "Refresh Updates", systemImage: "arrow.clockwise")
                     }
                     .disabled(ble.isCheckingCloudFirmware || ble.otaInProgress)
 
-                    cloudFirmwareButton(for: "RX", icon: "display")
-                    cloudFirmwareButton(for: "TX", icon: "antenna.radiowaves.left.and.right")
+                    Button {
+                        if isSelectedRouteConnected {
+                            ble.downloadAndUpdateFirmware(for: firmwareTarget)
+                        } else {
+                            ble.switchConnectionRoute(to: firmwareTarget)
+                        }
+                    } label: {
+                        Label(primaryFirmwareButtonTitle, systemImage: primaryFirmwareButtonIcon)
+                    }
+                    .disabled(primaryFirmwareButtonDisabled)
 
-                    firmwareUpdateButton(for: "RX", icon: "folder")
-                    firmwareUpdateButton(for: "TX", icon: "folder")
+                    Button {
+                        if isSelectedRouteConnected {
+                            showingFirmwareImporter = true
+                        } else {
+                            ble.switchConnectionRoute(to: firmwareTarget)
+                        }
+                    } label: {
+                        Label(isSelectedRouteConnected ? "Choose File Instead" : "Connect to \(firmwareTarget)", systemImage: "folder")
+                    }
+                    .disabled(ble.otaInProgress || (isSelectedRouteConnected && !ble.otaReady))
 
                     if ble.otaInProgress {
                         Button("Abort Update", role: .destructive) {
@@ -863,6 +895,36 @@ struct DiagnosticsView: View {
         }
     }
 
+    private var firmwareStatusText: String {
+        if ble.otaInProgress { return ble.otaStatus }
+        if ble.isCheckingCloudFirmware { return "Checking GitHub..." }
+        if ble.isDownloadingFirmware { return ble.cloudFirmwareStatus }
+        if let selectedFirmware {
+            return "\(firmwareTarget) \(selectedFirmware.version) available"
+        }
+        return ble.cloudFirmwareStatus
+    }
+
+    private var primaryFirmwareButtonTitle: String {
+        if !isSelectedRouteConnected { return "Connect to \(firmwareTarget)" }
+        if let selectedFirmware { return "Update \(firmwareTarget) to \(selectedFirmware.version)" }
+        return "Check for Updates First"
+    }
+
+    private var primaryFirmwareButtonIcon: String {
+        isSelectedRouteConnected ? "icloud.and.arrow.down" : routeIcon(for: firmwareTarget)
+    }
+
+    private var primaryFirmwareButtonDisabled: Bool {
+        ble.otaInProgress ||
+        ble.isDownloadingFirmware ||
+        (isSelectedRouteConnected && (!ble.otaReady || selectedFirmware == nil))
+    }
+
+    private func routeIcon(for route: String) -> String {
+        route == "TX" ? "antenna.radiowaves.left.and.right" : "display"
+    }
+
     private func diagRow(_ title: String, _ value: String) -> some View {
         LabeledContent(title) {
             Text(value)
@@ -870,38 +932,6 @@ struct DiagnosticsView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
         }
-    }
-
-    private func cloudFirmwareButton(for route: String, icon: String) -> some View {
-        let isCurrentRoute = ble.connectionRoute == route
-        let firmware = ble.availableFirmware.first { $0.target.caseInsensitiveCompare(route) == .orderedSame }
-        let title = firmware.map { "Download \(route) \($0.version)" } ?? "No \(route) Cloud Update"
-
-        return Button {
-            if isCurrentRoute {
-                ble.downloadAndUpdateFirmware(for: route)
-            } else {
-                ble.switchConnectionRoute()
-            }
-        } label: {
-            Label(isCurrentRoute ? title : "Connect to \(route)", systemImage: icon)
-        }
-        .disabled(ble.otaInProgress || ble.isDownloadingFirmware || firmware == nil || (isCurrentRoute && !ble.otaReady) || ble.connectionRoute == "--")
-    }
-
-    private func firmwareUpdateButton(for route: String, icon: String) -> some View {
-        let isCurrentRoute = ble.connectionRoute == route
-
-        return Button {
-            if isCurrentRoute {
-                showingFirmwareImporter = true
-            } else {
-                ble.switchConnectionRoute()
-            }
-        } label: {
-            Label(isCurrentRoute ? "Choose \(route) File" : "Connect to \(route)", systemImage: icon)
-        }
-        .disabled(ble.otaInProgress || (isCurrentRoute && !ble.otaReady) || ble.connectionRoute == "--")
     }
 }
 struct SignalBars: View {
