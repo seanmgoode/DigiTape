@@ -1,0 +1,19 @@
+{
+  "releasedAt": "2026-06-09",
+  "files": [
+    {
+      "target": "RX",
+      "version": "2.0.6",
+      "url": "https://github.com/seanmgoode/DigiTape/releases/download/v2.0.6/INSTALL_DigiTape_RX_2_0_6.ino.bin",
+      "size": 697808,
+      "notes": "RX OTA with stronger direct-TX release handoff."
+    },
+    {
+      "target": "TX",
+      "version": "2.0.6",
+      "url": "https://github.com/seanmgoode/DigiTape/releases/download/v2.0.6/INSTALL_DigiTape_TX_2_0_6.ino.bin",
+      "size": 652048,
+      "notes": "TX OTA-capable firmware."
+    }
+  ]
+}

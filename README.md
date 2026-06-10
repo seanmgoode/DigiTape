@@ -1,4 +1,4 @@
-# DigiTape iOS Controller 2.0.2
+# DigiTape iOS Controller 2.0.2-current
 
 Starter iPhone app for DigiTape RX/controller/emulator.
 
@@ -11,7 +11,7 @@ Starter iPhone app for DigiTape RX/controller/emulator.
 
 ## BLE compatibility
 
-Matches RX bridge firmware 2.0.2. The ESP32 RX should stay connected to the TX, advertise as `DigiTape-RX`, and expose this BLE service to the iPhone:
+Matches RX bridge firmware 2.0.6 and TX firmware 2.0.6. The ESP32 RX should stay connected to the TX, advertise as `DigiTape-RX`, and expose this BLE service to the iPhone:
 
 - Service UUID: `6f8a1500-b5a3-4f4a-9d7f-1a2b3c4d5e6f`
 - Distance Characteristic: `6f8a1501-b5a3-4f4a-9d7f-1a2b3c4d5e6f`
@@ -29,4 +29,10 @@ The app accepts both 15-byte packed and 16-byte aligned `DistancePacket` payload
 
 ## Notes
 
-This is a first working app shell. It does not yet include OTA updates, session recording, multi-tag UWB display, or polished DigiTape branding assets.
+This is a first working app shell. OTA updates are now available in Diagnostics. Session recording, multi-tag UWB display, and polished DigiTape branding assets are still future work.
+
+## Documentation
+
+- App guide: `docs/APP_GUIDE.md`
+- App releases: `docs/RELEASES.md`
+- Product release tracker: `../../../Documentation/RELEASE_TRACKER.md`

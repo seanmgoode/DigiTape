@@ -89,3 +89,22 @@ struct SettingsPacket {
 extension Double {
     var cmToInches: Double { self * 0.393701 }
 }
+
+struct FirmwareManifest: Decodable {
+    struct FirmwareFile: Decodable, Identifiable {
+        let target: String
+        let version: String
+        let url: URL
+        let size: Int?
+        let notes: String?
+
+        var id: String { target.uppercased() }
+    }
+
+    let releasedAt: String?
+    let files: [FirmwareFile]
+
+    func file(for route: String) -> FirmwareFile? {
+        files.first { $0.target.caseInsensitiveCompare(route) == .orderedSame }
+    }
+}
