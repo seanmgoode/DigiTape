@@ -2,14 +2,14 @@
 set -euo pipefail
 
 REPO="${REPO:-seanmgoode/DigiTape}"
-TAG="${TAG:-v2.0.8}"
-TITLE="${TITLE:-DigiTape Firmware v2.0.8}"
+TAG="${TAG:-v2.0.9}"
+TITLE="${TITLE:-DigiTape Firmware v2.0.9}"
 ROOT="${ROOT:-/Users/seangoode/Desktop/DigiTape}"
 APP_DIR="${APP_DIR:-$ROOT/App/data/DigiTape_iOS_Controller_2.0.2}"
 
 RX_BIN="$ROOT/Digitape Current INOs/DigiTape_RX_2_0_2/release/ota-update/INSTALL_DigiTape_RX_2_0_8.ino.bin"
-TX_BIN="$ROOT/Digitape Current INOs/DigiTape_TX_2_0_4/release/ota-update/INSTALL_DigiTape_TX_2_0_7.ino.bin"
-MANIFEST="$APP_DIR/docs/firmware-manifest.github-v2.0.8.json"
+TX_BIN="$ROOT/Digitape Current INOs/DigiTape_TX_2_0_4/release/ota-update/INSTALL_DigiTape_TX_2_0_8.ino.bin"
+MANIFEST="$APP_DIR/docs/firmware-manifest.github-v2.0.9.json"
 
 if [[ -z "${GITHUB_TOKEN:-}" ]]; then
   echo "Set GITHUB_TOKEN with repo release permission first."
