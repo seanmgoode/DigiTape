@@ -6,6 +6,7 @@ private enum DigiTapeBLEUUID {
     static let service = CBUUID(string: "6f8a1500-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
     static let distance = CBUUID(string: "6f8a1501-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
     static let settings = CBUUID(string: "6f8a1502-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
+    static let status = CBUUID(string: "6f8a1503-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
     static let otaControl = CBUUID(string: "6f8a15f1-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
     static let otaData = CBUUID(string: "6f8a15f2-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
     static let otaStatus = CBUUID(string: "6f8a15f3-b5a3-4f4a-9d7f-1a2b3c4d5e6f")
@@ -43,6 +44,7 @@ final class DigiTapeBLEManager: NSObject, ObservableObject {
     @Published var responseMode: ResponseMode = .normal
     @Published var sensorType: SensorType = .sr04
     @Published var txVersion = "--"
+    @Published var rxVersion = "--"
     @Published var rssi: Int = -100
     @Published var offsetInches: Int16 = 0
     @Published var emulatorMode = true
@@ -111,6 +113,10 @@ final class DigiTapeBLEManager: NSObject, ObservableObject {
     }
 
     var batteryPercent: Int { Int(emulatorBattery.rounded()) }
+
+    func installedFirmwareVersion(for route: String) -> String {
+        route.uppercased() == "RX" ? rxVersion : txVersion
+    }
 
     var linkOK: Bool {
         _ = packetFreshnessTick
@@ -466,6 +472,7 @@ extension DigiTapeBLEManager: CBPeripheralDelegate {
             peripheral.discoverCharacteristics([
                 DigiTapeBLEUUID.distance,
                 DigiTapeBLEUUID.settings,
+                DigiTapeBLEUUID.status,
                 DigiTapeBLEUUID.otaControl,
                 DigiTapeBLEUUID.otaData,
                 DigiTapeBLEUUID.otaStatus
@@ -483,6 +490,8 @@ extension DigiTapeBLEManager: CBPeripheralDelegate {
                 } else if characteristic.uuid == DigiTapeBLEUUID.settings {
                     self.settingsCharacteristic = characteristic
                     self.sendSettings()
+                } else if characteristic.uuid == DigiTapeBLEUUID.status {
+                    peripheral.readValue(for: characteristic)
                 } else if characteristic.uuid == DigiTapeBLEUUID.otaControl {
                     self.otaControlCharacteristic = characteristic
                     self.updateOTAReady()
@@ -499,6 +508,12 @@ extension DigiTapeBLEManager: CBPeripheralDelegate {
     }
 
     nonisolated func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+        if characteristic.uuid == DigiTapeBLEUUID.status, let data = characteristic.value {
+            let message = String(data: data, encoding: .utf8) ?? ""
+            Task { @MainActor in self.parseFirmwareStatus(message) }
+            return
+        }
+
         if characteristic.uuid == DigiTapeBLEUUID.otaStatus, let data = characteristic.value {
             let message = String(data: data, encoding: .utf8) ?? "OTA status"
             Task { @MainActor in self.otaStatus = message }
@@ -637,6 +652,18 @@ func scheduleRXPreferenceCheckIfNeeded() {
                 self.startScan(for: .rx, allowFallback: true)
             }
         }
+    }
+}
+
+func parseFirmwareStatus(_ message: String) {
+    let parts = message.split(separator: " ")
+    guard parts.count >= 2 else { return }
+    let target = parts[0].uppercased()
+    let version = String(parts[1])
+    if target == "RX" {
+        rxVersion = version
+    } else if target == "TX" {
+        txVersion = version
     }
 }
 

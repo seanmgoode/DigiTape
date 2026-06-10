@@ -1,0 +1,19 @@
+{
+  "releasedAt": "2026-06-10",
+  "files": [
+    {
+      "target": "RX",
+      "version": "2.0.7",
+      "url": "https://github.com/seanmgoode/DigiTape/releases/download/v2.0.7/INSTALL_DigiTape_RX_2_0_7.ino.bin",
+      "size": 697984,
+      "notes": "RX exposes installed firmware version to the app firmware updater."
+    },
+    {
+      "target": "TX",
+      "version": "2.0.6",
+      "url": "https://github.com/seanmgoode/DigiTape/releases/download/v2.0.7/INSTALL_DigiTape_TX_2_0_6.ino.bin",
+      "size": 652048,
+      "notes": "TX OTA-capable firmware."
+    }
+  ]
+}
