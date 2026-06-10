@@ -1,0 +1,19 @@
+{
+  "releasedAt": "2026-06-10",
+  "files": [
+    {
+      "target": "RX",
+      "version": "2.0.8",
+      "url": "https://github.com/seanmgoode/DigiTape/releases/download/v2.0.9/INSTALL_DigiTape_RX_2_0_8.ino.bin",
+      "size": 698272,
+      "notes": "RX shows an on-device OTA progress bar while firmware updates are running."
+    },
+    {
+      "target": "TX",
+      "version": "2.0.8",
+      "url": "https://github.com/seanmgoode/DigiTape/releases/download/v2.0.9/INSTALL_DigiTape_TX_2_0_8.ino.bin",
+      "size": 652720,
+      "notes": "TX adds MAX3232 MDR.X serial distance output on GPIO16 at 9600 8N1, with GPIO15 as serial input."
+    }
+  ]
+}
