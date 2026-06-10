@@ -4,21 +4,21 @@ The iOS app checks the latest GitHub Release manifest at:
 
 `https://github.com/seanmgoode/DigiTape/releases/latest/download/firmware-manifest.json`
 
-## First Release
+## Current Release
 
 Release tag:
 
-`v2.0.6`
+`v2.0.7`
 
 Assets to upload:
 
-- `INSTALL_DigiTape_RX_2_0_6.ino.bin`
+- `INSTALL_DigiTape_RX_2_0_7.ino.bin`
 - `INSTALL_DigiTape_TX_2_0_6.ino.bin`
 - `firmware-manifest.json`
 
 The manifest prepared for this release is:
 
-`docs/firmware-manifest.github-v2.0.6.json`
+`docs/firmware-manifest.github-v2.0.7.json`
 
 ## Create With Script
 
@@ -32,8 +32,8 @@ scripts/create_github_firmware_release.sh
 ## Manual GitHub UI Steps
 
 1. Open `https://github.com/seanmgoode/DigiTape/releases/new`.
-2. Tag: `v2.0.6`.
-3. Title: `DigiTape Firmware v2.0.6`.
+2. Tag: `v2.0.7`.
+3. Title: `DigiTape Firmware v2.0.7`.
 4. Upload the RX install binary, TX install binary, and manifest.
 5. The uploaded manifest asset must be named exactly `firmware-manifest.json`.
 6. Publish release.
