@@ -1,6 +1,6 @@
 # DigiTape iOS App Guide
 
-Current app project: **DigiTape iOS Controller 2.0.2**
+Current app project: **DigiTape iOS Controller 2.1**
 
 ## Main Modes
 
@@ -12,17 +12,17 @@ Current app project: **DigiTape iOS Controller 2.0.2**
 
 ## OTA Updates
 
-Use Settings > Firmware Update.
+The app checks GitHub Releases automatically when it opens. Use Settings > Firmware Update to pick the listed RX or TX firmware and start OTA.
 
-- To update RX, connect to RX and choose `INSTALL_DigiTape_RX_2_0_8.ino.bin`.
-- To update TX, tap `Connect to TX`, wait for route `TX`, then choose `INSTALL_DigiTape_TX_2_0_9.ino.bin`.
+- To update RX, connect to RX and choose `RX 2.1`.
+- To update TX, switch to TX, wait for route `TX`, then choose `TX 2.1`.
 - Use `.ino.bin` files for app OTA.
 - Use `.merged.bin` files only for full USB flashing.
 
 ## Expected Firmware
 
-- RX: `2.0.8`
-- TX: `2.0.9`
+- RX: `2.1`
+- TX: `2.1`
 
 ## BLE UUIDs
 
@@ -36,7 +36,7 @@ Use Settings > Firmware Update.
 
 ## Cloud Firmware
 
-The app can check an HTTPS firmware manifest, show available RX/TX firmware, download the selected `.ino.bin`, and start OTA from Settings.
+The app checks the HTTPS firmware manifest automatically, shows available RX/TX firmware, downloads the selected `.ino.bin`, and starts OTA from Settings.
 
 Manifest format example:
 

@@ -9,6 +9,13 @@
       "notes": "RX shows an on-device OTA progress bar while firmware updates are running."
     },
     {
+      "target": "RX_TOUCH28",
+      "version": "2.0.9T",
+      "url": "https://github.com/seanmgoode/DigiTape/releases/download/v2.0.10/INSTALL_DigiTape_RX_2_0_9T_Touch28_Test.ino.bin",
+      "size": 698272,
+      "notes": "RX test firmware for the 2.8 inch ILI9341/FT6336 touch screen branch."
+    },
+    {
       "target": "TX",
       "version": "2.0.9",
       "url": "https://github.com/seanmgoode/DigiTape/releases/download/v2.0.10/INSTALL_DigiTape_TX_2_0_9.ino.bin",

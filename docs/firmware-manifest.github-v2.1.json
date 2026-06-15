@@ -1,0 +1,19 @@
+{
+  "releasedAt": "2026-06-15",
+  "files": [
+    {
+      "target": "RX",
+      "version": "2.1",
+      "url": "https://github.com/seanmgoode/DigiTape/releases/download/v2.1/INSTALL_DigiTape_RX_2_1.ino.bin",
+      "size": 740960,
+      "notes": "Current RX firmware for the 2.8 inch touchscreen display, RYUW status, red/green NeoPixel status, and FAST/NORMAL/SMOOTH/SLOW response modes."
+    },
+    {
+      "target": "TX",
+      "version": "2.1",
+      "url": "https://github.com/seanmgoode/DigiTape/releases/download/v2.1/INSTALL_DigiTape_TX_2_1.ino.bin",
+      "size": 663952,
+      "notes": "Current TX firmware with FAST/NORMAL/SMOOTH/SLOW response modes and smoother distance-change filtering."
+    }
+  ]
+}

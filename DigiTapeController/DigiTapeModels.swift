@@ -23,13 +23,15 @@ enum ResponseMode: UInt8, CaseIterable, Identifiable {
     case fast = 0
     case normal = 1
     case avg = 2
+    case slow = 3
 
     var id: UInt8 { rawValue }
     var label: String {
         switch self {
         case .fast: return "FAST"
-        case .normal: return "DEFAULT"
-        case .avg: return "AVG"
+        case .normal: return "NORMAL"
+        case .avg: return "SMOOTH"
+        case .slow: return "SLOW"
         }
     }
 }
@@ -41,12 +43,13 @@ struct DistancePacket {
     var responseMode: ResponseMode
     var sensorType: SensorType
     var txVersion: String
+    var inputMillivolts: UInt16?
 
     var isValid: Bool { errorFlag == 0 }
 
-    // Supports both packed 15-byte payloads and ESP32-aligned 16-byte payloads.
+    // Supports legacy 15/16-byte payloads and newer payloads with TX input voltage appended.
     init?(data: Data) {
-        guard data.count == 15 || data.count == 16 else { return nil }
+        guard data.count == 15 || data.count == 16 || data.count == 17 || data.count == 18 else { return nil }
         func u16(_ offset: Int) -> UInt16 {
             UInt16(data[offset]) | (UInt16(data[offset + 1]) << 8)
         }
@@ -63,6 +66,13 @@ struct DistancePacket {
         let versionStart = packetOffset + 4
         let versionBytes = data[versionStart..<min(versionStart + 8, data.count)]
         txVersion = String(bytes: versionBytes.prefix { $0 != 0 }, encoding: .utf8) ?? "--"
+
+        let voltageOffset = versionStart + 8
+        if data.count >= voltageOffset + 2 {
+            inputMillivolts = u16(voltageOffset)
+        } else {
+            inputMillivolts = nil
+        }
     }
 }
 
@@ -98,7 +108,7 @@ struct FirmwareManifest: Decodable {
         let size: Int?
         let notes: String?
 
-        var id: String { target.uppercased() }
+        var id: String { "\(target.uppercased())-\(version)-\(url.absoluteString)" }
     }
 
     let releasedAt: String?

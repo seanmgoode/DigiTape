@@ -44,7 +44,9 @@ final class DigiTapeBLEManager: NSObject, ObservableObject {
     @Published var responseMode: ResponseMode = .normal
     @Published var sensorType: SensorType = .sr04
     @Published var txVersion = "--"
+    @Published var txInputMillivolts: UInt16?
     @Published var rxVersion = "--"
+    @Published var uwbStatus = "--"
     @Published var rssi: Int = -100
     @Published var offsetInches: Int16 = 0
     @Published var emulatorMode = true
@@ -89,6 +91,7 @@ final class DigiTapeBLEManager: NSObject, ObservableObject {
     private let otaChunkSize = 180
     private let rxReleaseTXCommand: UInt8 = 1
     private var manualTXRouteUntil: Date?
+    private var hasCheckedCloudFirmware = false
 
     override init() {
         super.init()
@@ -115,6 +118,18 @@ final class DigiTapeBLEManager: NSObject, ObservableObject {
 
     var batteryPercent: Int { Int(emulatorBattery.rounded()) }
 
+    var txInputVoltageText: String {
+        if emulatorMode {
+            return String(format: "%.1fV", emulatorInputVoltage)
+        }
+        guard let txInputMillivolts else { return "USB" }
+        return String(format: "%.1fV", Double(txInputMillivolts) / 1000.0)
+    }
+
+    private var emulatorInputVoltage: Double {
+        3.3 + (emulatorBattery / 100.0) * 0.9
+    }
+
     func installedFirmwareVersion(for route: String) -> String {
         route.uppercased() == "RX" ? rxVersion : txVersion
     }
@@ -123,7 +138,27 @@ final class DigiTapeBLEManager: NSObject, ObservableObject {
         _ = packetFreshnessTick
         if emulatorMode { return true }
         guard isConnected, errorFlag == 0, let lastPacketDate else { return false }
-        return Date().timeIntervalSince(lastPacketDate) <= 1.5
+        let maxPacketAge = sensorType == .tag ? 3.5 : 1.5
+        return Date().timeIntervalSince(lastPacketDate) <= maxPacketAge
+    }
+
+    var packetAgeText: String {
+        _ = packetFreshnessTick
+        guard let lastPacketDate else { return "--" }
+        return String(format: "%.1fs", Date().timeIntervalSince(lastPacketDate))
+    }
+
+    var tagLinkText: String {
+        guard sensorType == .tag else { return "Off" }
+        if linkOK { return "Live" }
+        return errorFlag == 0 ? "Searching" : "Error"
+    }
+
+    var txRouteLockText: String {
+        _ = packetFreshnessTick
+        guard connectionRoute == "TX", sensorType == .tag else { return "Normal" }
+        guard let manualTXRouteUntil, Date() < manualTXRouteUntil else { return "Normal" }
+        return "TX pinned"
     }
 
     func startLiveMode() {
@@ -176,36 +211,42 @@ final class DigiTapeBLEManager: NSObject, ObservableObject {
         lastPacketDate = nil
     }
 
-func checkCloudFirmware() {
-    guard let url = URL(string: firmwareManifestURL), url.scheme == "https" else {
-        cloudFirmwareStatus = "Set HTTPS manifest URL"
-        return
+    func checkCloudFirmwareIfNeeded() {
+        guard !hasCheckedCloudFirmware, !isCheckingCloudFirmware else { return }
+        hasCheckedCloudFirmware = true
+        checkCloudFirmware()
     }
 
-    isCheckingCloudFirmware = true
-    cloudFirmwareStatus = "Checking cloud..."
+    func checkCloudFirmware() {
+        guard let url = URL(string: firmwareManifestURL), url.scheme == "https" else {
+            cloudFirmwareStatus = "Set HTTPS manifest URL"
+            return
+        }
 
-    Task {
-        do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                throw URLError(.badServerResponse)
-            }
+        isCheckingCloudFirmware = true
+        cloudFirmwareStatus = "Checking cloud..."
 
-            let manifest = try JSONDecoder().decode(FirmwareManifest.self, from: data)
-            await MainActor.run {
-                self.availableFirmware = manifest.files
-                self.cloudFirmwareStatus = manifest.files.isEmpty ? "No firmware listed" : "Cloud firmware ready"
-                self.isCheckingCloudFirmware = false
-            }
-        } catch {
-            await MainActor.run {
-                self.cloudFirmwareStatus = "Cloud check failed"
-                self.isCheckingCloudFirmware = false
+        Task {
+            do {
+                let (data, response) = try await URLSession.shared.data(from: url)
+                guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                    throw URLError(.badServerResponse)
+                }
+
+                let manifest = try JSONDecoder().decode(FirmwareManifest.self, from: data)
+                await MainActor.run {
+                    self.availableFirmware = manifest.files
+                    self.cloudFirmwareStatus = manifest.files.isEmpty ? "No firmware listed" : "Cloud firmware ready"
+                    self.isCheckingCloudFirmware = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.cloudFirmwareStatus = "Cloud check failed"
+                    self.isCheckingCloudFirmware = false
+                }
             }
         }
     }
-}
 
 func downloadAndUpdateFirmware(for route: String? = nil) {
     let selectedRoute = route ?? connectionRoute
@@ -216,6 +257,15 @@ func downloadAndUpdateFirmware(for route: String? = nil) {
 
     guard let firmware = availableFirmware.first(where: { $0.target.caseInsensitiveCompare(selectedRoute) == .orderedSame }) else {
         cloudFirmwareStatus = "No \(selectedRoute) cloud firmware"
+        return
+    }
+
+    downloadAndUpdateFirmware(firmware)
+}
+
+func downloadAndUpdateFirmware(_ firmware: FirmwareManifest.FirmwareFile) {
+    guard connectionRoute != "--" else {
+        cloudFirmwareStatus = "Connect to RX or TX"
         return
     }
 
@@ -383,6 +433,31 @@ func switchConnectionRoute() {
         }
         sendSettings()
     }
+
+    func selectTXTagSource() {
+        wantsLiveConnection = true
+        emulatorMode = false
+        manualTXRouteUntil = Date().addingTimeInterval(600)
+        if connectionRoute != "TX" {
+            switchConnectionRoute(to: "TX")
+            return
+        }
+        sendSettings(reservedCommand: 2)
+        status = "Selecting TAG..."
+    }
+
+    func selectTXSensorSource() {
+        wantsLiveConnection = true
+        emulatorMode = false
+        manualTXRouteUntil = Date().addingTimeInterval(600)
+        if connectionRoute != "TX" {
+            switchConnectionRoute(to: "TX")
+            return
+        }
+        sendSettings(reservedCommand: 3)
+        status = "Selecting TX sensor..."
+    }
+
 }
 
 extension DigiTapeBLEManager: CBCentralManagerDelegate {
@@ -390,6 +465,9 @@ extension DigiTapeBLEManager: CBCentralManagerDelegate {
         Task { @MainActor in
             isBluetoothReady = central.state == .poweredOn
             status = isBluetoothReady ? "Bluetooth ready" : "Bluetooth unavailable"
+            if isBluetoothReady && wantsLiveConnection && !emulatorMode && !isConnected && !isScanning {
+                startScan(for: scanTarget, allowFallback: scanTarget == .rx)
+            }
         }
     }
 
@@ -431,11 +509,14 @@ extension DigiTapeBLEManager: CBCentralManagerDelegate {
 
     nonisolated func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         Task { @MainActor in
+            let failedTarget = self.connectingTarget ?? self.scanTarget
             self.connectFallbackTimer?.invalidate()
             self.connectFallbackTimer = nil
-            self.status = "Could not connect to \(self.connectingTarget?.displayName ?? "DigiTape")"
-            if self.connectingTarget == .rx {
-                self.startScan(for: .tx, allowFallback: false)
+            self.connectingTarget = nil
+            self.peripheral = nil
+            self.status = "Could not connect to \(failedTarget.displayName), retrying..."
+            if self.wantsLiveConnection && !self.emulatorMode {
+                self.startScan(for: failedTarget, allowFallback: failedTarget == .rx)
             }
         }
     }
@@ -543,7 +624,13 @@ extension DigiTapeBLEManager: CBPeripheralDelegate {
                 self.responseMode = packet.responseMode
             }
             self.sensorType = packet.sensorType
+            if self.connectedTarget == .tx && packet.sensorType == .tag {
+                self.manualTXRouteUntil = Date().addingTimeInterval(600)
+                self.rxPreferenceTimer?.invalidate()
+                self.rxPreferenceTimer = nil
+            }
             self.txVersion = packet.txVersion
+            self.txInputMillivolts = packet.inputMillivolts
             self.lastPacketDate = Date()
             self.packetFreshnessTick &+= 1
             self.status = packet.isValid ? "Live" : "Sensor error"
@@ -633,12 +720,15 @@ private extension DigiTapeBLEManager {
         connectFallbackTimer?.invalidate()
         connectFallbackTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: false) { [weak self] _ in
             Task { @MainActor in
-                guard let self, !self.isConnected, self.connectingTarget == .rx else { return }
+                guard let self, !self.isConnected, self.wantsLiveConnection, !self.emulatorMode else { return }
+                let target = self.connectingTarget ?? self.scanTarget
                 if let peripheral = self.peripheral {
                     self.central.cancelPeripheralConnection(peripheral)
                 }
-                self.status = "RX unavailable, trying TX..."
-                self.startScan(for: .tx, allowFallback: false)
+                self.connectingTarget = nil
+                self.peripheral = nil
+                self.status = "\(target.displayName) unavailable, retrying..."
+                self.startScan(for: target, allowFallback: target == .rx)
             }
         }
     }
@@ -672,6 +762,26 @@ func parseFirmwareStatus(_ message: String) {
         rxVersion = version
     } else if target == "TX" {
         txVersion = version
+    }
+    for part in parts.dropFirst(2) {
+        let fields = part.split(separator: "=", maxSplits: 1)
+        guard fields.count == 2 else { continue }
+        if fields[0].lowercased() == "uwb" {
+            uwbStatus = Self.displayStatus(for: String(fields[1]))
+        }
+    }
+}
+
+private static func displayStatus(for value: String) -> String {
+    switch value.lowercased() {
+    case "ready", "ok", "online":
+        return "Ready"
+    case "offline", "failed", "fail":
+        return "Offline"
+    case "disabled":
+        return "Disabled"
+    default:
+        return value.isEmpty ? "--" : value.capitalized
     }
 }
 
