@@ -4,7 +4,7 @@
     {
       "target": "RX_CURRENT",
       "version": "2.0.2",
-      "url": "https://github.com/seanmgoode/DigiTape/releases/download/v2.1/INSTALL_DigiTape_RX_2_0_2_Current.ino.bin",
+      "url": "https://raw.githubusercontent.com/seanmgoode/DigiTape/main/firmware/releases/v2.1-current/INSTALL_DigiTape_RX_2_0_2_Current.ino.bin",
       "size": 712256,
       "notes": "Current RX firmware from DigiTape_Firmware_Set/Current_RX_DigiTape_RX_2_0_2.",
       "channel": "stable",
@@ -15,7 +15,7 @@
     {
       "target": "RX",
       "version": "2.1",
-      "url": "https://github.com/seanmgoode/DigiTape/releases/download/v2.1/INSTALL_DigiTape_RX_Touch28_2_1.ino.bin",
+      "url": "https://raw.githubusercontent.com/seanmgoode/DigiTape/main/firmware/releases/v2.1-current/INSTALL_DigiTape_RX_Touch28_2_1.ino.bin",
       "size": 748368,
       "notes": "Current larger touch RX firmware for the 2.8 inch ILI9341/FT6336 build.",
       "channel": "stable",
@@ -26,7 +26,7 @@
     {
       "target": "RX_MINI",
       "version": "1.0",
-      "url": "https://github.com/seanmgoode/DigiTape/releases/download/v2.1/INSTALL_DigiTape_RX_Mini_AMOLED_1_0.ino.bin",
+      "url": "https://raw.githubusercontent.com/seanmgoode/DigiTape/main/firmware/releases/v2.1-current/INSTALL_DigiTape_RX_Mini_AMOLED_1_0.ino.bin",
       "size": 1766624,
       "notes": "Mini RX 1.0 firmware for the 1.8 inch AMOLED watch board. Built with the ESP32-S3 huge_app partition.",
       "channel": "stable",

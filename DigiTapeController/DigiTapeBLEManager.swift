@@ -56,7 +56,7 @@ final class DigiTapeBLEManager: NSObject, ObservableObject {
     @Published var otaInProgress = false
     @Published var otaProgress = 0.0
     @Published var otaStatus = "OTA idle"
-    @Published var firmwareManifestURL = "https://github.com/seanmgoode/DigiTape/releases/latest/download/firmware-manifest.json"
+    @Published var firmwareManifestURL = "https://raw.githubusercontent.com/seanmgoode/DigiTape/main/firmware/releases/v2.1-current/firmware-manifest.json"
     @Published var cloudFirmwareStatus = "Cloud idle"
     @Published var availableFirmware: [FirmwareManifest.FirmwareFile] = []
     @Published var isCheckingCloudFirmware = false
