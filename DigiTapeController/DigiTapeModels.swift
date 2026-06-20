@@ -97,6 +97,10 @@ struct FirmwareManifest: Decodable {
         let url: URL
         let size: Int?
         let notes: String?
+        let channel: String?
+        let sha256: String?
+        let role: String?
+        let hardware: String?
 
         var id: String { target.uppercased() }
     }
