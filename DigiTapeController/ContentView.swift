@@ -7,9 +7,26 @@ enum RXScreen: String, CaseIterable {
     case menu
     case offset
     case mode
+    case themeColor
+    case connections
+    case connectionBLE
+    case connectionUWB
+    case connectionWiFi
+    case parameters
+    case marks
+    case limits
+    case lockouts
+    case xover
     case tag
     case diagnostics
+    case firmware
     case about
+}
+
+struct AppMark: Identifiable {
+    let id = UUID()
+    var name: String
+    var inches: Int
 }
 
 struct ContentView: View {
@@ -54,14 +71,34 @@ struct RXConsoleView: View {
     @State private var sourceIsTag = false
     @State private var forceTXSensorLabel = false
     @State private var requestedAutoConnect = false
-    @State private var activePanel: HomePanel?
+    @State private var firmwareTarget = "RX"
+    @State private var distanceLocked = false
+    @State private var lockedFeet = 0
+    @State private var lockedInches = 0
+    @State private var tagNames = ["CAM A", "CAM B", "CAM C", "FOCUS"]
+    @State private var tagOffsets: [Int16] = [0, 0, 0, 0]
+    @State private var activeTagIndex = 0
+    @State private var editingTagIndex = 0
+    @State private var marks: [AppMark] = []
+    @State private var limitsActive = false
+    @State private var limitMinInches = 1
+    @State private var limitMaxInches = 99 * 12 + 99
+    @State private var lockoutMinInches = 0
+    @State private var lockoutMaxInches = 0
+    @State private var lockoutEnabled = false
+    private let tagIDs = ["TAG00001", "TAG00002", "TAG00003", "TAG00004"]
+    private let tagNamePresets = ["CAM A", "CAM B", "CAM C", "FOCUS", "WITNESS", "RX"]
 
     private let menuItems: [(String, RXScreen)] = [
-        ("Offset", .offset),
-        ("Mode", .mode),
-        ("Tag", .tag),
-        ("Diagnostics", .diagnostics),
-        ("About", .about)
+        ("Connections", .connections),
+        ("Firmware", .firmware),
+        ("Diagnostics", .diagnostics)
+    ]
+
+    private let parameterItems: [(String, RXScreen)] = [
+        ("Marks", .marks),
+        ("Limits", .limits),
+        ("Lockouts", .lockouts)
     ]
 
     var body: some View {
@@ -69,18 +106,14 @@ struct RXConsoleView: View {
             let landscape = geo.size.width > geo.size.height
             Group {
                 if landscape {
-                    HStack(spacing: 14) {
-                        lcd
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                        landscapeControls
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
+                    lcd(touchscreenShape: true, landscapeLayout: true)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 4)
                 } else {
                     VStack(spacing: 10) {
-                        lcd
-                            .padding(.horizontal, -8)
-                        controlRow
+                        lcd(touchscreenShape: true, landscapeLayout: false)
+                            .padding(.horizontal, -4)
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 8)
@@ -89,19 +122,19 @@ struct RXConsoleView: View {
             }
             .frame(width: geo.size.width, height: geo.size.height)
         }
-        .background(Color(.systemBackground))
-        .onAppear { autoConnectIfNeeded() }
+        .background(Color.black)
+        .onAppear {
+            OLEDTheme.activePixel = .white
+            autoConnectIfNeeded()
+        }
         .onChange(of: ble.isBluetoothReady) { _, _ in autoConnectIfNeeded() }
-        .fullScreenCover(item: $activePanel) { panel in
-            switch panel {
-            case .diagnostics:
-                DiagnosticsView(ble: ble)
-                    .interactiveDismissDisabled()
-            }
+        .onChange(of: ble.themeColor) { _, _ in OLEDTheme.activePixel = .white }
+        .onReceive(ble.$parameterSnapshot) { snapshot in
+            applyParameterSnapshot(snapshot)
         }
     }
 
-    private var lcd: some View {
+    private func lcd(touchscreenShape: Bool, landscapeLayout: Bool = false) -> some View {
         OLEDDisplay(
             ble: ble,
             screen: screen,
@@ -109,69 +142,28 @@ struct RXConsoleView: View {
             menuItems: menuItems.map(\.0),
             sourceIsTag: sourceIsTag,
             forceTXSensorLabel: forceTXSensorLabel,
+            distanceLocked: distanceLocked,
+            lockedFeet: lockedFeet,
+            lockedInches: lockedInches,
+            tagNames: tagNames,
+            tagOffsets: tagOffsets,
+            tagIDs: tagIDs,
+            activeTagIndex: activeTagIndex,
+            editingTagIndex: editingTagIndex,
+            marks: marks,
+            limitsActive: limitsActive,
+            limitMinInches: limitMinInches,
+            limitMaxInches: limitMaxInches,
+            lockoutMinInches: lockoutMinInches,
+            lockoutMaxInches: lockoutMaxInches,
+            lockoutEnabled: lockoutEnabled,
+            firmwareTarget: firmwareTarget,
+            displayAspectRatio: landscapeLayout ? 820.0 / 390.0 : (touchscreenShape ? 450.0 / 600.0 : 128.0 / 64.0),
+            fillDisplay: touchscreenShape,
+            landscapeLayout: landscapeLayout,
             onSoftKeyTap: handle,
             onMenuItemTap: openMenuItem
         )
-    }
-
-    private var controlRow: some View {
-        HStack(spacing: 10) {
-            Spacer(minLength: 0)
-            panelButton(.diagnostics)
-        }
-        .frame(maxWidth: .infinity, alignment: .trailing)
-    }
-
-    private var landscapeControls: some View {
-        VStack(alignment: .center, spacing: 12) {
-            compactPanelButton(.diagnostics)
-            Spacer(minLength: 0)
-        }
-        .frame(width: 48)
-        .frame(maxHeight: .infinity, alignment: .top)
-    }
-
-    private enum HomePanel: Identifiable {
-        case diagnostics
-
-        var id: Self { self }
-
-        var title: String {
-            switch self {
-            case .diagnostics: return "Diag"
-            }
-        }
-
-        var icon: String {
-            switch self {
-            case .diagnostics: return "gearshape"
-            }
-        }
-    }
-
-    private func panelButton(_ panel: HomePanel) -> some View {
-        Button {
-            activePanel = panel
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: panel.icon)
-                Text(panel.title)
-            }
-            .font(.system(size: 14, weight: .semibold))
-            .frame(minWidth: 92, minHeight: 36)
-        }
-        .buttonStyle(MonoButtonStyle())
-    }
-
-    private func compactPanelButton(_ panel: HomePanel) -> some View {
-        Button {
-            activePanel = panel
-        } label: {
-            Image(systemName: panel.icon)
-                .font(.system(size: 17, weight: .semibold))
-                .frame(width: 40, height: 40)
-        }
-        .buttonStyle(MonoButtonStyle())
     }
 
 private var routeIndicator: some View {
@@ -217,7 +209,6 @@ private var routeIsActive: Bool {
             .frame(minWidth: 112, minHeight: 36)
         }
         .buttonStyle(MonoButtonStyle(isActive: ble.isConnected && !ble.emulatorMode))
-        .disabled(ble.isScanning)
     }
 
     private var compactConnectButton: some View {
@@ -227,7 +218,6 @@ private var routeIsActive: Bool {
                 .frame(width: 40, height: 40)
         }
         .buttonStyle(MonoButtonStyle(isActive: ble.isConnected && !ble.emulatorMode))
-        .disabled(ble.isScanning)
     }
 
     private var connectionTitle: String {
@@ -252,8 +242,9 @@ private var routeIsActive: Bool {
     }
 
     private func toggleTagSensorSource() {
+        guard tagPacketActiveForConsole || sourceIsTag else { return }
         requestedAutoConnect = true
-        if sourceIsTag || (!ble.emulatorMode && ble.connectionRoute == "TX" && ble.sensorType == .tag) {
+        if sourceIsTag {
             sourceIsTag = false
             forceTXSensorLabel = true
             ble.selectTXSensorSource()
@@ -264,7 +255,7 @@ private var routeIsActive: Bool {
         }
     }
 
-    enum Key { case k1, k2, k3, k4, k5 }
+    enum Key { case k1, k2, k3, k4, k5, k6, k7, k8 }
 
     private func handle(_ key: Key) {
         switch (screen, key) {
@@ -275,12 +266,28 @@ private var routeIsActive: Bool {
         case (.home, .k2):
             screen = .offset
         case (.home, .k3):
-            cycleResponse(1)
+            screen = .mode
         case (.home, .k4):
             screen = .menu
             menuIndex = 0
         case (.home, .k5):
-            screen = .diagnostics
+            screen = .connections
+        case (.home, .k6):
+            if distanceLocked {
+                distanceLocked = false
+            } else if ble.sensorOK {
+                let total = max(0, Int((ble.currentDistanceInches + Double(currentOffsetValue)).rounded()))
+                lockedFeet = total / 12
+                lockedInches = total % 12
+                distanceLocked = true
+            }
+        case (.home, .k7):
+            screen = .parameters
+        case (.home, .k8):
+            sourceIsTag = false
+            forceTXSensorLabel = true
+            requestedAutoConnect = true
+            ble.startDirectTXMode()
         case (.menu, .k1):
             menuIndex = (menuIndex + menuItems.count - 1) % menuItems.count
         case (.menu, .k2):
@@ -290,14 +297,13 @@ private var routeIsActive: Bool {
         case (.menu, .k4):
             screen = .home
         case (.offset, .k1):
-            ble.nudgeOffset(1)
+            nudgeCurrentOffset(1)
         case (.offset, .k2):
-            ble.nudgeOffset(-1)
+            nudgeCurrentOffset(-1)
         case (.offset, .k3):
-            ble.offsetInches = 0
-            ble.sendSettings()
+            setCurrentOffset(0)
         case (.offset, .k4):
-            ble.sendSettings()
+            if !tagSourceActiveForConsole { ble.sendSettings() }
             screen = .home
         case (.mode, .k1):
             cycleResponse(1)
@@ -308,19 +314,207 @@ private var routeIsActive: Bool {
             screen = .home
         case (.mode, .k4):
             screen = .home
+        case (.connections, .k1):
+            screen = .connectionBLE
+        case (.connections, .k2):
+            screen = .connectionUWB
+        case (.connections, .k3):
+            screen = .connectionWiFi
+        case (.connections, .k4):
+            screen = .home
+        case (.connectionBLE, .k4), (.connectionUWB, .k4), (.connectionWiFi, .k4):
+            screen = .home
+        case (.parameters, .k1):
+            screen = .marks
+        case (.parameters, .k2):
+            screen = .limits
+        case (.parameters, .k3):
+            screen = .lockouts
+        case (.parameters, .k4):
+            screen = .home
+        case (.marks, .k1):
+            addMarkFromLiveDistance()
+        case (.marks, .k2):
+            marks.removeAll()
+            publishParameterSnapshot()
+        case (.marks, .k4), (.limits, .k4), (.lockouts, .k4):
+            screen = .parameters
+        case (.limits, .k1):
+            limitsActive = true
+            limitMinInches = max(1, limitMinInches - 1)
+            publishParameterSnapshot()
+        case (.limits, .k2):
+            limitsActive = true
+            limitMinInches = min(limitMaxInches - 1, limitMinInches + 1)
+            publishParameterSnapshot()
+        case (.limits, .k3):
+            limitsActive = true
+            limitMaxInches = max(limitMinInches + 1, limitMaxInches - 1)
+            publishParameterSnapshot()
+        case (.limits, .k7):
+            limitsActive = true
+            limitMaxInches = min(99 * 12 + 99, limitMaxInches + 1)
+            publishParameterSnapshot()
+        case (.limits, .k8):
+            limitsActive = false
+            limitMinInches = 1
+            limitMaxInches = 99 * 12 + 99
+            publishParameterSnapshot()
+        case (.lockouts, .k1):
+            lockoutMinInches = max(0, currentSourceTotalInches - 6)
+            lockoutMaxInches = currentSourceTotalInches + 6
+            lockoutEnabled = true
+            publishParameterSnapshot()
+        case (.lockouts, .k2):
+            lockoutEnabled = false
+            publishParameterSnapshot()
+        case (.lockouts, .k3):
+            lockoutMinInches = max(0, lockoutMinInches - 1)
+            publishParameterSnapshot()
+        case (.lockouts, .k7):
+            lockoutMaxInches = min(99 * 12 + 99, lockoutMaxInches + 1)
+            publishParameterSnapshot()
+        case (.themeColor, .k4):
+            screen = .home
         case (.tag, .k1):
-            sourceIsTag = false
-            screen = .home
+            editingTagIndex = (editingTagIndex + 1) % tagNames.count
         case (.tag, .k2):
+            activeTagIndex = editingTagIndex
             sourceIsTag = true
+            forceTXSensorLabel = false
             screen = .home
-        case (.voltage, .k4):
+        case (.tag, .k3):
+            cycleEditingTagName()
+        case (.diagnostics, .k1):
+            screen = .firmware
+        case (.diagnostics, .k2):
+            ble.refreshConnection()
+        case (.firmware, .k1):
+            guard !ble.otaInProgress else { break }
+            firmwareTarget = firmwareTarget == "RX" ? "TX" : "RX"
+        case (.firmware, .k2):
+            if firmwareRouteConnected {
+                if let selectedFirmware = firmwareSelection(for: firmwareTarget) {
+                    ble.downloadAndUpdateFirmware(selectedFirmware)
+                }
+            } else {
+                ble.switchConnectionRouteForFirmwareUpdate(to: firmwareTarget)
+            }
+        case (.firmware, .k3):
+            if ble.otaInProgress {
+                ble.abortFirmwareUpdate()
+            }
+        case (.voltage, .k4), (.diagnostics, .k4):
             screen = .home
+        case (.firmware, .k4):
+            screen = .menu
         case (_, .k4):
             screen = screen == .menu ? .home : .menu
         default:
             break
         }
+    }
+
+    private var activeTagSafeIndex: Int {
+        min(max(activeTagIndex, 0), max(tagNames.count - 1, 0))
+    }
+
+    private var tagSourceActiveForConsole: Bool {
+        sourceIsTag
+    }
+
+    private var tagPacketActiveForConsole: Bool {
+        ble.sensorOK && ble.sensorType == .tag
+    }
+
+    private var currentOffsetValue: Int16 {
+        if tagSourceActiveForConsole, tagOffsets.indices.contains(activeTagSafeIndex) {
+            return tagOffsets[activeTagSafeIndex]
+        }
+        return ble.offsetInches
+    }
+
+    private func setCurrentOffset(_ value: Int16) {
+        if tagSourceActiveForConsole, tagOffsets.indices.contains(activeTagSafeIndex) {
+            tagOffsets[activeTagSafeIndex] = value
+        } else {
+            ble.offsetInches = value
+            ble.sendSettings()
+        }
+    }
+
+    private func nudgeCurrentOffset(_ delta: Int16) {
+        setCurrentOffset(currentOffsetValue + delta)
+    }
+
+
+    private var currentSourceTotalInches: Int {
+        if tagSourceActiveForConsole { return 0 }
+        return max(0, Int((ble.currentDistanceInches + Double(currentOffsetValue)).rounded()))
+    }
+
+    private func formatDistance(_ inches: Int) -> String {
+        "\(max(0, inches) / 12)' \(max(0, inches) % 12)\""
+    }
+
+    private func addMarkFromLiveDistance() {
+        guard marks.count < 4 else { return }
+        let nextName = String(UnicodeScalar(65 + marks.count)!)
+        marks.append(AppMark(name: nextName, inches: currentSourceTotalInches))
+        publishParameterSnapshot()
+    }
+
+    private func publishParameterSnapshot() {
+        let snapshot = ParameterSnapshot(
+            marks: marks.prefix(4).enumerated().map { index, mark in
+                (mark.inches, UInt8(index + 1))
+            },
+            limitsActive: limitsActive,
+            minLimitInches: limitMinInches,
+            maxLimitInches: limitMaxInches,
+            lockouts: lockoutEnabled ? [(lockoutMinInches, lockoutMaxInches)] : []
+        )
+        ble.setParameterSnapshot(snapshot)
+    }
+
+    private func applyParameterSnapshot(_ snapshot: ParameterSnapshot) {
+        marks = snapshot.marks.prefix(4).enumerated().map { index, mark in
+            AppMark(name: String(UnicodeScalar(65 + index)!), inches: mark.inches)
+        }
+        limitsActive = snapshot.limitsActive
+        limitMinInches = snapshot.limitsActive ? snapshot.minLimitInches : 1
+        limitMaxInches = snapshot.limitsActive ? snapshot.maxLimitInches : 99 * 12 + 99
+        if let lockout = snapshot.lockouts.first {
+            lockoutEnabled = true
+            lockoutMinInches = lockout.min
+            lockoutMaxInches = lockout.max
+        } else {
+            lockoutEnabled = false
+        }
+    }
+
+    private func cycleEditingTagName() {
+        guard tagNames.indices.contains(editingTagIndex) else { return }
+        let current = tagNames[editingTagIndex]
+        let nextIndex = ((tagNamePresets.firstIndex(of: current) ?? -1) + 1 + tagNamePresets.count) % tagNamePresets.count
+        tagNames[editingTagIndex] = tagNamePresets[nextIndex]
+    }
+
+    private var firmwareRouteConnected: Bool {
+        ble.connectionRoute == firmwareTarget
+    }
+
+    private func firmwareSelection(for target: String) -> FirmwareManifest.FirmwareFile? {
+        ble.availableFirmware.first { firmwareMatchesTarget($0, target: target) }
+    }
+
+    private func firmwareMatchesTarget(_ firmware: FirmwareManifest.FirmwareFile, target: String) -> Bool {
+        let normalizedTarget = target.uppercased()
+        let normalizedFirmware = firmware.target
+            .uppercased()
+            .replacingOccurrences(of: "-", with: "_")
+            .replacingOccurrences(of: " ", with: "_")
+        return normalizedFirmware == normalizedTarget || normalizedFirmware.hasPrefix("\(normalizedTarget)_")
     }
 
     private func cycleResponse(_ delta: Int) {
@@ -351,7 +545,10 @@ private var routeIsActive: Bool {
 
     private func toggleConnection() {
         sourceIsTag = false
-        if ble.isConnected && !ble.emulatorMode {
+        if ble.isScanning {
+            requestedAutoConnect = true
+            ble.refreshConnection()
+        } else if ble.isConnected && !ble.emulatorMode {
             ble.disconnect()
         } else {
             requestedAutoConnect = true
@@ -407,81 +604,210 @@ struct OLEDDisplay: View {
     let menuItems: [String]
     let sourceIsTag: Bool
     let forceTXSensorLabel: Bool
+    let distanceLocked: Bool
+    let lockedFeet: Int
+    let lockedInches: Int
+    let tagNames: [String]
+    let tagOffsets: [Int16]
+    let tagIDs: [String]
+    let activeTagIndex: Int
+    let editingTagIndex: Int
+    let marks: [AppMark]
+    let limitsActive: Bool
+    let limitMinInches: Int
+    let limitMaxInches: Int
+    let lockoutMinInches: Int
+    let lockoutMaxInches: Int
+    let lockoutEnabled: Bool
+    let firmwareTarget: String
+    let displayAspectRatio: CGFloat
+    let fillDisplay: Bool
+    let landscapeLayout: Bool
     let onSoftKeyTap: (RXConsoleView.Key) -> Void
     let onMenuItemTap: (Int) -> Void
+    private let showDistanceScaleEndpointIcons = true
 
     var body: some View {
         ZStack {
             Color.black
             GeometryReader { geo in
-                let scale = geo.size.width / 128
+                let wideHome = fillDisplay && landscapeLayout && screen == .home
+                let baseWidth: CGFloat = wideHome ? 820 : (fillDisplay ? 450 : 128)
+                let baseHeight: CGFloat = wideHome ? 390 : (fillDisplay ? 600 : 64)
+                let fillScaleX = geo.size.width / baseWidth
+                let fillScaleY = geo.size.height / baseHeight
+                let uniformScale = min(fillScaleX, fillScaleY)
+                let scaleX = wideHome ? fillScaleX : uniformScale
+                let scaleY = wideHome ? fillScaleY : uniformScale
+                let contentWidth = baseWidth * scaleX
+                let contentHeight = baseHeight * scaleY
                 ZStack(alignment: .topLeading) {
-                    oledScreen(scale)
-                        .frame(width: 128, height: 64, alignment: .topLeading)
-                        .scaleEffect(scale, anchor: .topLeading)
-                        .allowsHitTesting(false)
-                    touchTargets(scale: scale)
+                    ZStack(alignment: .topLeading) {
+                        oledScreen(scaleX)
+                            .frame(width: baseWidth, height: baseHeight, alignment: .topLeading)
+                            .scaleEffect(x: scaleX, y: scaleY, anchor: .topLeading)
+                            .allowsHitTesting(false)
+                        touchTargets(scaleX: scaleX, scaleY: scaleY)
+                    }
+                    .frame(width: contentWidth, height: contentHeight, alignment: .topLeading)
+                    .offset(x: (geo.size.width - contentWidth) / 2, y: (geo.size.height - contentHeight) / 2)
                 }
             }
         }
-        .aspectRatio(128.0 / 64.0, contentMode: .fit)
+        .aspectRatio(displayAspectRatio, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     @ViewBuilder
-    private func touchTargets(scale: CGFloat) -> some View {
-        if screen == .home {
-            tapZone(x: 104, y: 0, width: 24, height: 13, scale: scale) {
-                onSoftKeyTap(.k1)
-            }
-            tapZone(x: 64, y: 0, width: 30, height: 14, scale: scale) {
-                onSoftKeyTap(.k5)
-            }
-            tapZone(x: 0, y: 50, width: 52, height: 14, scale: scale) {
-                onSoftKeyTap(.k2)
-            }
-            tapZone(x: 50, y: 50, width: 32, height: 14, scale: scale) {
-                onSoftKeyTap(.k3)
-            }
-            tapZone(x: 104, y: 50, width: 24, height: 14, scale: scale) {
-                onSoftKeyTap(.k4)
-            }
+    private func touchTargets(scaleX: CGFloat, scaleY: CGFloat) -> some View {
+        if fillDisplay && landscapeLayout && screen == .home {
+            landscapeHomeTargets(scaleX: scaleX, scaleY: scaleY)
+        } else if fillDisplay {
+            touchscreenTargets(scaleX: scaleX, scaleY: scaleY)
+        } else if screen == .home {
+            tapZone(x: 104, y: 0, width: 24, height: 13, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+            tapZone(x: 64, y: 0, width: 30, height: 14, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k5) }
+            tapZone(x: 0, y: 50, width: 52, height: 14, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k2) }
+            tapZone(x: 50, y: 50, width: 32, height: 14, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k3) }
+            tapZone(x: 104, y: 50, width: 24, height: 14, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
         } else {
             if screen == .voltage {
-                tapZone(x: 104, y: 0, width: 24, height: 13, scale: scale) {
-                    onSoftKeyTap(.k1)
-                }
+                tapZone(x: 104, y: 0, width: 24, height: 13, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
             }
             if screen == .menu {
                 ForEach(menuItems.indices, id: \.self) { index in
-                    tapZone(x: 0, y: CGFloat(14 + index * 8), width: 82, height: 8, scale: scale) {
-                        onMenuItemTap(index)
-                    }
+                    tapZone(x: 0, y: CGFloat(14 + index * 8), width: 82, height: 8, scaleX: scaleX, scaleY: scaleY) { onMenuItemTap(index) }
                 }
             }
-            tapZone(x: 84, y: 10, width: 44, height: 14, scale: scale) {
-                onSoftKeyTap(.k1)
-            }
-            tapZone(x: 84, y: 24, width: 44, height: 14, scale: scale) {
-                onSoftKeyTap(.k2)
-            }
-            tapZone(x: 84, y: 38, width: 44, height: 13, scale: scale) {
-                onSoftKeyTap(.k3)
-            }
-            tapZone(x: 84, y: 51, width: 44, height: 13, scale: scale) {
-                onSoftKeyTap(.k4)
-            }
+            tapZone(x: 84, y: 10, width: 44, height: 14, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+            tapZone(x: 84, y: 24, width: 44, height: 14, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k2) }
+            tapZone(x: 84, y: 38, width: 44, height: 13, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k3) }
+            tapZone(x: 84, y: 51, width: 44, height: 13, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
         }
     }
 
-    private func tapZone(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, scale: CGFloat, action: @escaping () -> Void) -> some View {
+@ViewBuilder
+private func landscapeHomeTargets(scaleX: CGFloat, scaleY: CGFloat) -> some View {
+    tapZone(x: 24, y: 0, width: 124, height: 84, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k8) }
+    tapZone(x: 150, y: 0, width: 500, height: 84, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k5) }
+    if distanceLocked {
+        tapZone(x: 0, y: 96, width: 820, height: 176, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k6) }
+    } else {
+        longPressZone(x: 0, y: 96, width: 820, height: 176, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k6) }
+    }
+    tapZone(x: 696, y: 0, width: 124, height: 84, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+    tapZone(x: 24, y: 304, width: 160, height: 78, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k2) }
+    tapZone(x: 224, y: 304, width: 170, height: 78, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k3) }
+    tapZone(x: 666, y: 216, width: 128, height: 78, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k7) }
+    tapZone(x: 656, y: 308, width: 128, height: 74, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+}
+
+@ViewBuilder
+private func touchscreenTargets(scaleX: CGFloat, scaleY: CGFloat) -> some View {
+        switch screen {
+        case .home:
+            tapZone(x: 0, y: 0, width: 112, height: 92, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k8) }
+            tapZone(x: 118, y: 0, width: 232, height: 92, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k5) }
+            if distanceLocked {
+                tapZone(x: 0, y: 112, width: 450, height: 280, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k6) }
+            } else {
+                longPressZone(x: 0, y: 112, width: 450, height: 280, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k6) }
+            }
+            tapZone(x: 350, y: 0, width: 100, height: 92, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+            tapZone(x: 0, y: 506, width: 154, height: 94, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k2) }
+            tapZone(x: 154, y: 506, width: 150, height: 94, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k3) }
+            tapZone(x: 344, y: 420, width: 92, height: 84, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k7) }
+            tapZone(x: 304, y: 506, width: 146, height: 94, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .menu:
+            ForEach(menuItems.indices, id: \.self) { index in
+                tapZone(x: 44, y: CGFloat(112 + index * 78), width: 362, height: 62, scaleX: scaleX, scaleY: scaleY) { onMenuItemTap(index) }
+            }
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .offset:
+            tapZone(x: 300, y: 350, width: 108, height: 104, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+            tapZone(x: 42, y: 350, width: 108, height: 104, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k2) }
+            tapZone(x: 171, y: 350, width: 108, height: 104, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k3) }
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .mode:
+            tapZone(x: 48, y: 116, width: 354, height: 64, scaleX: scaleX, scaleY: scaleY) { ble.setResponse(.fast); onSoftKeyTap(.k4) }
+            tapZone(x: 48, y: 198, width: 354, height: 64, scaleX: scaleX, scaleY: scaleY) { ble.setResponse(.normal); onSoftKeyTap(.k4) }
+            tapZone(x: 48, y: 280, width: 354, height: 64, scaleX: scaleX, scaleY: scaleY) { ble.setResponse(.avg); onSoftKeyTap(.k4) }
+            tapZone(x: 48, y: 362, width: 354, height: 64, scaleX: scaleX, scaleY: scaleY) { ble.setResponse(.slow); onSoftKeyTap(.k4) }
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .themeColor:
+            ForEach(Array(ThemeColor.allCases.enumerated()), id: \.element.id) { index, color in
+                tapZone(x: 48, y: CGFloat(112 + index * 78), width: 354, height: 60, scaleX: scaleX, scaleY: scaleY) { ble.setThemeColor(color); OLEDTheme.activePixel = .white; onSoftKeyTap(.k4) }
+            }
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .connections:
+            tapZone(x: 48, y: 126, width: 354, height: 72, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+            tapZone(x: 48, y: 230, width: 354, height: 72, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k2) }
+            tapZone(x: 48, y: 334, width: 354, height: 72, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k3) }
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .connectionBLE, .connectionUWB, .connectionWiFi:
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .parameters:
+            tapZone(x: 48, y: 130, width: 354, height: 72, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+            tapZone(x: 48, y: 230, width: 354, height: 72, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k2) }
+            tapZone(x: 48, y: 330, width: 354, height: 72, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k3) }
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .marks:
+            tapZone(x: 48, y: 160, width: 166, height: 58, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+            tapZone(x: 236, y: 160, width: 166, height: 58, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k2) }
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .limits:
+            tapZone(x: 42, y: 366, width: 84, height: 54, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+            tapZone(x: 136, y: 366, width: 84, height: 54, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k2) }
+            tapZone(x: 230, y: 366, width: 84, height: 54, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k3) }
+            tapZone(x: 324, y: 366, width: 84, height: 54, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k7) }
+            tapZone(x: 48, y: 448, width: 354, height: 54, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k8) }
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .lockouts:
+            tapZone(x: 48, y: 342, width: 166, height: 58, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+            tapZone(x: 236, y: 342, width: 166, height: 58, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k2) }
+            tapZone(x: 48, y: 422, width: 166, height: 58, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k3) }
+            tapZone(x: 236, y: 422, width: 166, height: 58, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k7) }
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .xover:
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .voltage:
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+        case .tag:
+            tapZone(x: 48, y: 400, width: 354, height: 64, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+            tapZone(x: 48, y: 484, width: 354, height: 64, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k2) }
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .diagnostics:
+            tapZone(x: 48, y: 502, width: 166, height: 54, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+            tapZone(x: 236, y: 502, width: 166, height: 54, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k2) }
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        case .firmware:
+            tapZone(x: 48, y: 132, width: 354, height: 64, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k1) }
+            tapZone(x: 48, y: 408, width: 354, height: 64, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k2) }
+            if ble.otaInProgress {
+                tapZone(x: 48, y: 486, width: 354, height: 64, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k3) }
+            }
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        default:
+            tapZone(x: 0, y: 0, width: 126, height: 96, scaleX: scaleX, scaleY: scaleY) { onSoftKeyTap(.k4) }
+        }
+    }
+
+    private func tapZone(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, scaleX: CGFloat, scaleY: CGFloat, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Color.white.opacity(0.001)
-                .frame(width: width * scale, height: height * scale)
+                .frame(width: width * scaleX, height: height * scaleY)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .offset(x: x * scale, y: y * scale)
+        .offset(x: x * scaleX, y: y * scaleY)
+    }
+
+    private func longPressZone(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, scaleX: CGFloat, scaleY: CGFloat, action: @escaping () -> Void) -> some View {
+        Color.white.opacity(0.001)
+            .frame(width: width * scaleX, height: height * scaleY)
+            .contentShape(Rectangle())
+            .onLongPressGesture(minimumDuration: 1.0, maximumDistance: 18, perform: action)
+            .offset(x: x * scaleX, y: y * scaleY)
     }
 
     private func handleTap(at location: CGPoint, scale: CGFloat) {
@@ -525,7 +851,10 @@ struct OLEDDisplay: View {
 
     @ViewBuilder
     private func oledScreen(_ scale: CGFloat) -> some View {
-        switch screen {
+        if fillDisplay {
+            touchscreenScreen
+        } else {
+            switch screen {
         case .home:
             homeScreen
         case .voltage:
@@ -536,12 +865,975 @@ struct OLEDDisplay: View {
             offsetScreen
         case .mode:
             modeScreen
+        case .themeColor:
+            themeColorScreen
+        case .connections:
+            compactListScreen(title: "CONN", rows: ["BLE", "UWB", "WiFi"])
+        case .connectionBLE:
+            compactInfoScreen(title: "BLE", rows: ["Link \(ble.linkOK ? "OK" : "--")", "Sig \(homeSignalPercent)%", "Route \(ble.connectionRoute)"])
+        case .connectionUWB:
+            compactInfoScreen(title: "UWB", rows: ["Searching", "Signal 0/4", "Tag --"])
+        case .connectionWiFi:
+            compactInfoScreen(title: "WiFi", rows: ["Ready", "Network --", "Debug --"])
+        case .parameters:
+            compactListScreen(title: "PARAM", rows: ["Marks", "Limits", "Lockouts"])
+        case .marks:
+            compactInfoScreen(title: "MARKS", rows: ["Live \(currentSourceDistanceText)", "No marks", "ADD CLEAR"])
+        case .limits:
+            compactInfoScreen(title: "LIMITS", rows: ["Live \(currentSourceDistanceText)", "MIN 0'01\"", "MAX 99'99\""])
+        case .lockouts:
+            compactInfoScreen(title: "LOCK", rows: ["No zones", "ADD", "CLEAR"])
+        case .xover:
+            compactInfoScreen(title: "XOVER", rows: ["Mode OFF", "Sensor \(currentSourceDistanceText)", "Tag --"])
         case .tag:
             tagScreen
         case .diagnostics:
             diagnosticsScreen
+        case .firmware:
+            compactFirmwareScreen
         case .about:
             aboutScreen
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var touchscreenScreen: some View {
+        switch screen {
+case .home:
+    if landscapeLayout {
+        touchLandscapeHomeScreen
+    } else {
+        touchHomeScreen
+    }
+        case .voltage: touchVoltageScreen
+        case .menu: touchMenuScreen
+        case .offset: touchOffsetScreen
+        case .mode: touchModeScreen
+        case .themeColor: touchThemeColorScreen
+        case .connections: touchConnectionsScreen
+        case .connectionBLE: touchConnectionDetailScreen(title: "BLE", symbol: .ble)
+        case .connectionUWB: touchConnectionDetailScreen(title: "UWB", symbol: .uwb)
+        case .connectionWiFi: touchConnectionDetailScreen(title: "WiFi", symbol: .wifi)
+        case .parameters: touchParametersScreen
+        case .marks: touchMarksScreen
+        case .limits: touchLimitsScreen
+        case .lockouts: touchLockoutsScreen
+        case .xover: touchXOverScreen
+        case .tag: touchTagScreen
+        case .diagnostics: touchDiagnosticsScreen
+        case .firmware: touchFirmwareScreen
+        case .about: touchAboutScreen
+        }
+    }
+
+    private var touchHomeScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchRoutePill(x: 24, y: 24, width: 72, height: 42)
+            touchSourceDetailLabel(x: 18, y: 72, width: 84, fontSize: 13)
+            touchBleBars(x: 136, y: 23, percent: homeSignalPercent)
+            touchWifiIcon(x: 225, y: 28, percent: ble.emulatorMode ? ble.signalPercent : (ble.linkOK ? 80 : 0))
+            touchUWBIcon(x: 300, y: 28, connected: false)
+            touchBatteryPill(x: 358, y: 26, width: 70, height: 36)
+            touchLockIcon(x: 212, y: 126)
+            TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                touchDistanceBig(lockedVisible: lockedDistanceVisible(at: context.date))
+            }
+            touchParameterTimeline(x: 58, y: 378, width: 334)
+            touchHomePill("OFF \(signedOffset)", x: 24, y: 520, width: 118, height: 50, fontSize: 22)
+            if !tagSourceActive {
+                touchHomePill(ble.responseMode.label, x: 166, y: 520, width: 118, height: 50, fontSize: 22)
+            }
+            touchParametersPill(x: 362, y: 435)
+            touchHomePill("MENU", x: 330, y: 520, width: 98, height: 50, fontSize: 22)
+        }
+    }
+
+    private var touchLandscapeHomeScreen: some View {
+    ZStack(alignment: .topLeading) {
+        touchRoutePill(x: 28, y: 22, width: 92, height: 48)
+        touchSourceDetailLabel(x: 22, y: 76, width: 104, fontSize: 13)
+        touchBleBars(x: 215, y: 19, percent: homeSignalPercent)
+        touchWifiIcon(x: 360, y: 28, percent: ble.emulatorMode ? ble.signalPercent : (ble.linkOK ? 80 : 0))
+        touchUWBIcon(x: 494, y: 30, connected: false)
+        touchBatteryPill(x: 680, y: 24, width: 92, height: 42)
+        touchLockIcon(x: 400, y: 96)
+        TimelineView(.periodic(from: .now, by: 0.5)) { context in
+            touchDistanceBig(lockedVisible: lockedDistanceVisible(at: context.date), canvasWidth: 820, top: 122, height: 120, feetX: 338, inchX: 424, compactInches: true)
+        }
+        touchParameterTimeline(x: 106, y: 276, width: 608)
+        touchHomePill("OFF \(signedOffset)", x: 34, y: 330, width: 150, height: 48, fontSize: 22)
+        if !tagSourceActive {
+            touchHomePill(ble.responseMode.label, x: 235, y: 330, width: 160, height: 48, fontSize: 22)
+        }
+        touchParametersPill(x: 686, y: 223)
+        touchHomePill("MENU", x: 672, y: 319, width: 120, height: 50, fontSize: 22)
+    }
+}
+
+private var touchVoltageScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("POWER")
+            touchCardRow("TX Voltage", value: txVoltageDetailText, y: 112, valueColor: txVoltageDetailText == "--" ? OLEDTheme.dim : Color(red: 0.50, green: 0.72, blue: 1.0), compact: true)
+            touchCardRow("RX Source", value: rxPowerSourceText, y: 176, valueColor: rxPowerSourceText == "USB" ? Color(red: 0.50, green: 0.72, blue: 1.0) : OLEDTheme.pixel, compact: true)
+            touchCardRow("RX Battery", value: rxBatteryAmountText, y: 240, valueColor: batteryTextColor, compact: true)
+            touchCardRow("RX Batt V", value: rxBatteryVoltageText, y: 304, valueColor: rxBatteryVoltageText == "--" ? OLEDTheme.dim : OLEDTheme.pixel, compact: true)
+            touchCardRow("RX USB/SYS", value: rxUsbSystemVoltageText, y: 368, valueColor: rxUsbSystemVoltageText == "--" ? OLEDTheme.dim : Color(red: 0.50, green: 0.72, blue: 1.0), compact: true)
+        }
+        .onAppear {
+            ble.requestStatusUpdate()
+        }
+    }
+
+    private var touchMenuScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("SETTINGS")
+            ForEach(menuItems.indices, id: \.self) { index in
+                touchMenuRow(menuItems[index], y: 112 + index * 78)
+            }
+        }
+    }
+
+    private var touchOffsetScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("OFFSET")
+            touchText("DISTANCE", x: 176, y: 112, size: 18, color: OLEDTheme.dim)
+            touchDistancePreviewBox(x: 50, y: 142, width: 350, height: 82)
+            touchCardRow("Sensor Offset", value: signedOffset, y: 256)
+            touchBigButton("-", x: 42, y: 372, height: 92)
+            touchBigButton("0", x: 171, y: 372, height: 92)
+            touchBigButton("+", x: 300, y: 372, height: 92)
+        }
+    }
+
+    private var touchModeScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("MODE")
+            touchModeOption(.fast, y: 116)
+            touchModeOption(.normal, y: 198)
+            touchModeOption(.avg, y: 280)
+            touchModeOption(.slow, y: 362)
+        }
+    }
+
+    private var touchThemeColorScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("COLOR")
+            ForEach(Array(ThemeColor.allCases.enumerated()), id: \.element.id) { index, color in
+                touchThemeColorOption(color, y: 112 + index * 78)
+            }
+        }
+    }
+
+    private func touchThemeColorOption(_ color: ThemeColor, y: Int) -> some View {
+        let selected = ble.themeColor == color
+        return ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(selected ? color.color : OLEDTheme.dim, lineWidth: 1.5)
+                .frame(width: 354, height: 60)
+                .offset(x: 48, y: CGFloat(y))
+            if selected {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(color.color)
+                    .frame(width: 344, height: 50)
+                    .offset(x: 53, y: CGFloat(y + 5))
+            }
+            touchText(color.label, x: 225 - touchTextWidth(color.label, size: 28) / 2, y: y + 14, size: 28, color: selected ? .black : color.color)
+        }
+    }
+
+    private var touchConnectionsScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("CONNECTIONS")
+            touchConnectionButton("BLE", symbol: .ble, y: 126, status: ble.linkOK ? "OK" : "SCAN")
+            touchConnectionButton("UWB", symbol: .uwb, y: 230, status: "SEARCH")
+            touchConnectionButton("WiFi", symbol: .wifi, y: 334, status: ble.emulatorMode ? "EMU" : "READY")
+        }
+    }
+
+    private enum ConnectionSymbol {
+        case ble
+        case uwb
+        case wifi
+    }
+
+    private func touchConnectionButton(_ label: String, symbol: ConnectionSymbol, y: Int, status: String) -> some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(red: 0.06, green: 0.08, blue: 0.06))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(OLEDTheme.dim, lineWidth: 1.8))
+                .frame(width: 354, height: 72)
+                .offset(x: 48, y: CGFloat(y))
+            connectionSymbol(symbol, x: 72, y: y + 16, size: 40)
+            touchText(label, x: 140, y: y + 19, size: 30)
+            touchText(status, x: 300, y: y + 23, size: 22, color: status == "OK" ? OLEDTheme.pixel : OLEDTheme.warning)
+        }
+    }
+
+    private func touchConnectionDetailScreen(title: String, symbol: ConnectionSymbol) -> some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader(title)
+            connectionSymbol(symbol, x: 195, y: 108, size: 56)
+            touchCardRow("Source", value: title == "BLE" ? ble.connectionRoute : title, y: 184)
+            touchCardRow("Link", value: connectionDetailLink(title), y: 270, valueColor: connectionDetailColor(title))
+            touchCardRow("Signal", value: connectionDetailSignal(title), y: 356)
+            if title == "WiFi" {
+                touchCardRow("Network", value: ble.emulatorMode ? "Emulator" : "Current", y: 442)
+            }
+        }
+    }
+
+    private var touchParametersScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("PARAMETERS")
+            touchParameterButton("Marks", y: 130)
+            touchParameterButton("Limits", y: 230)
+            touchParameterButton("Lockouts", y: 330)
+        }
+    }
+
+    private func touchParameterButton(_ title: String, y: Int, value: String? = nil) -> some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(red: 0.06, green: 0.08, blue: 0.06))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(OLEDTheme.dim, lineWidth: 1.8))
+                .frame(width: 354, height: 64)
+                .offset(x: 48, y: CGFloat(y))
+            touchText(title, x: 76, y: y + 17, size: 28)
+            if let value {
+                touchText(value, x: 328, y: y + 19, size: 24, color: OLEDTheme.dim)
+            }
+        }
+    }
+
+    private var touchMarksScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("MARKS")
+            touchText("LIVE", x: 170, y: 104, size: 17, color: OLEDTheme.dim)
+            touchText(currentSourceDistanceText, x: 225 - touchTextWidth(currentSourceDistanceText, size: 32) / 2, y: 130, size: 32)
+            touchSmallButton("ADD", x: 48, y: 190, width: 166, height: 58)
+            touchSmallButton("CLEAR", x: 236, y: 190, width: 166, height: 58)
+            if marks.isEmpty {
+                touchText("No marks", x: 168, y: 292, size: 22, color: OLEDTheme.dim)
+            } else {
+                ForEach(Array(marks.prefix(4).enumerated()), id: \.element.id) { index, mark in
+                    touchCardRow(mark.name, value: formatDistance(mark.inches), y: 276 + index * 58, compact: true)
+                }
+            }
+        }
+    }
+
+    private var touchLimitsScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("LIMITS")
+            touchText("Live  \(currentSourceDistanceText)", x: 225 - touchTextWidth("Live  \(currentSourceDistanceText)", size: 26) / 2, y: 112, size: 26)
+            touchLimitBox("MIN", value: limitsActive ? formatDistance(limitMinInches) : "--", x: 48, y: 178)
+            touchLimitBox("MAX", value: limitsActive ? formatDistance(limitMaxInches) : "--", x: 240, y: 178)
+            touchSmallButton("MIN -", x: 42, y: 366, width: 84, height: 54)
+            touchSmallButton("MIN +", x: 136, y: 366, width: 84, height: 54)
+            touchSmallButton("MAX -", x: 230, y: 366, width: 84, height: 54)
+            touchSmallButton("MAX +", x: 324, y: 366, width: 84, height: 54)
+            touchHomePill("CLEAR", x: 48, y: 448, width: 354, height: 54, fontSize: 24)
+        }
+    }
+
+    private var touchLockoutsScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("LOCKOUTS")
+            touchText("Live  \(currentSourceDistanceText)", x: 225 - touchTextWidth("Live  \(currentSourceDistanceText)", size: 25) / 2, y: 112, size: 25)
+            touchCardRow("Status", value: lockoutEnabled ? "ON" : "OFF", y: 162, valueColor: lockoutEnabled ? OLEDTheme.pixel : OLEDTheme.warning)
+            touchLimitBox("MIN", value: lockoutEnabled ? formatDistance(lockoutMinInches) : "--", x: 48, y: 248)
+            touchLimitBox("MAX", value: lockoutEnabled ? formatDistance(lockoutMaxInches) : "--", x: 240, y: 248)
+            touchSmallButton("SET", x: 48, y: 342, width: 166, height: 58)
+            touchSmallButton("CLEAR", x: 236, y: 342, width: 166, height: 58)
+            touchSmallButton("MIN -", x: 48, y: 422, width: 166, height: 58)
+            touchSmallButton("MAX +", x: 236, y: 422, width: 166, height: 58)
+        }
+    }
+
+    private var touchXOverScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("X-OVER")
+            touchText("Mode", x: 28, y: 62, size: 18, color: OLEDTheme.dim)
+            touchText("OFF", x: 178, y: 62, size: 22)
+            touchText("Sensor", x: 28, y: 100, size: 18, color: OLEDTheme.dim)
+            touchText(currentSourceDistanceText, x: 178, y: 100, size: 20)
+            touchText("Tag", x: 28, y: 138, size: 18, color: OLEDTheme.dim)
+            touchText("--' --\"", x: 178, y: 138, size: 20)
+            touchText("Delta", x: 28, y: 176, size: 18, color: OLEDTheme.dim)
+            touchText("--", x: 178, y: 176, size: 20)
+            touchHomePill("TURN ON", x: 50, y: 486, width: 350, height: 50, fontSize: 22)
+        }
+    }
+
+    private var touchTagScreen: some View {
+        let safeIndex = min(max(editingTagIndex, 0), tagNames.count - 1)
+        let activeSlot = safeIndex == activeTagIndex
+        let liveActive = tagPacketActive && activeSlot
+        return ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("TAGS")
+            touchInfoRow("Slot", value: "TAG \(safeIndex + 1)\(activeSlot ? " ACTIVE" : "")", y: 132, valueColor: activeSlot ? OLEDTheme.pixel : OLEDTheme.warning)
+            touchInfoRow("Name", value: tagNames[safeIndex], y: 194, valueColor: activeSlot ? OLEDTheme.pixel : OLEDTheme.warning)
+            touchInfoRow("ID", value: tagIDs[safeIndex], y: 256)
+            touchInfoRow("Status", value: liveActive ? "SEEN" : "--", y: 318, valueColor: liveActive ? OLEDTheme.pixel : OLEDTheme.warning)
+            touchParameterButton("NEXT", y: 400)
+            touchParameterButton("USE", y: 484)
+        }
+    }
+
+    private var touchDiagnosticsScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("DIAGNOSTICS")
+            touchCardRow("Status", value: shortDebugText(ble.status, limit: 22), y: 106, compact: true)
+            touchCardRow("Route", value: ble.connectionRoute, y: 160, compact: true)
+            touchCardRow("Scan", value: shortDebugText(ble.scanDebug, limit: 24), y: 214, compact: true)
+            touchCardRow("RSSI", value: "\(ble.rssi) dBm", y: 268, compact: true)
+            touchCardRow("Packets", value: "\(ble.packetCounter)", y: 322, compact: true)
+            touchCardRow("Sensor", value: ble.sensorOK ? ble.sensorType.label : "--", y: 376, valueColor: ble.sensorOK ? OLEDTheme.pixel : OLEDTheme.warning, compact: true)
+            touchCardRow("UWB", value: ble.uwbStatus, y: 430, valueColor: ble.uwbStatus == "OK" ? OLEDTheme.pixel : OLEDTheme.warning, compact: true)
+            touchSmallButton("FIRMWARE", x: 48, y: 502, width: 166, height: 54)
+            touchSmallButton("REFRESH", x: 236, y: 502, width: 166, height: 54)
+        }
+    }
+
+    private func shortDebugText(_ text: String, limit: Int) -> String {
+        text.count > limit ? String(text.prefix(limit)) : text
+    }
+
+    private var touchFirmwareScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("FIRMWARE")
+            touchCardRow("Target", value: firmwareTarget, y: 132)
+            touchCardRow("Current", value: ble.installedFirmwareVersion(for: firmwareTarget), y: 218)
+            touchCardRow("Cloud", value: firmwareStatusText, y: 304, valueColor: selectedFirmware == nil && !ble.otaInProgress ? OLEDTheme.warning : OLEDTheme.pixel)
+            if ble.otaInProgress {
+                touchFirmwareProgress(y: 390)
+            } else {
+                touchParameterButton(primaryFirmwareButtonTitle, y: 408)
+            }
+        }
+    }
+
+    private var firmwareChoices: [FirmwareManifest.FirmwareFile] {
+        ble.availableFirmware.filter { firmwareMatchesTarget($0, target: firmwareTarget) }
+    }
+
+    private var selectedFirmware: FirmwareManifest.FirmwareFile? {
+        firmwareChoices.first
+    }
+
+    private var firmwareRouteConnected: Bool {
+        ble.connectionRoute == firmwareTarget
+    }
+
+    private var firmwareStatusText: String {
+        if ble.otaInProgress { return shortFirmwareText(ble.otaStatus) }
+        if ble.isCheckingCloudFirmware { return "CHECKING" }
+        if ble.isDownloadingFirmware { return shortFirmwareText(ble.cloudFirmwareStatus) }
+        if let selectedFirmware { return selectedFirmware.version }
+        return shortFirmwareText(ble.cloudFirmwareStatus)
+    }
+
+    private var primaryFirmwareButtonTitle: String {
+        if !firmwareRouteConnected { return "CONNECT \(firmwareTarget)" }
+        if selectedFirmware != nil { return "UPDATE" }
+        if ble.isCheckingCloudFirmware { return "CHECKING" }
+        return "NO UPDATE"
+    }
+
+    private func firmwareMatchesTarget(_ firmware: FirmwareManifest.FirmwareFile, target: String) -> Bool {
+        let normalizedTarget = target.uppercased()
+        let normalizedFirmware = firmware.target
+            .uppercased()
+            .replacingOccurrences(of: "-", with: "_")
+            .replacingOccurrences(of: " ", with: "_")
+        return normalizedFirmware == normalizedTarget || normalizedFirmware.hasPrefix("\(normalizedTarget)_")
+    }
+
+    private func shortFirmwareText(_ text: String) -> String {
+        text.count > 12 ? String(text.prefix(12)) : text
+    }
+
+    private func touchFirmwareProgress(y: Int) -> some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(OLEDTheme.dim, lineWidth: 1.8)
+                .frame(width: 354, height: 34)
+                .offset(x: 48, y: CGFloat(y))
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(OLEDTheme.pixel)
+                .frame(width: max(2, CGFloat(350 * min(max(ble.otaProgress, 0), 1))), height: 28)
+                .offset(x: 50, y: CGFloat(y + 3))
+            touchText("\(Int(ble.otaProgress * 100))%", x: 198, y: y + 4, size: 20, color: .black)
+        }
+    }
+
+    private var touchAboutScreen: some View {
+        ZStack(alignment: .topLeading) {
+            touchBorder
+            touchBackPill()
+            touchHeader("ABOUT")
+            touchInfoRow("Device", value: "DigiTape RX", y: 136)
+            touchInfoRow("App", value: "2.1", y: 198)
+            touchInfoRow("Display", value: "2.41 AMOLED", y: 260)
+            touchInfoRow("Touch", value: "CST816", y: 322)
+            touchInfoRow("For", value: "Deeds", y: 384)
+        }
+    }
+
+    private func touchDistanceBig(lockedVisible: Bool, canvasWidth: Int = 450, top: Int = 222, height: Int = 120, feetX: Int = 198, inchX: Int = 260, compactInches: Bool = false) -> some View {
+    let showDistance = homeDistanceLive
+    let feetText = showDistance ? String(distanceParts.feet) : "--"
+    let inchText = showDistance ? String(distanceParts.inches) : "--"
+    let numberWidth = CGFloat(canvasWidth / 2 - 92)
+    let inchWidth = compactInches ? CGFloat(150) : numberWidth
+    return ZStack(alignment: .topLeading) {
+        Text(feetText)
+            .font(.system(size: CGFloat(height) * 0.65, weight: .regular, design: .rounded))
+            .foregroundStyle(OLEDTheme.pixel)
+            .lineLimit(1)
+            .minimumScaleFactor(0.55)
+            .frame(width: numberWidth, height: CGFloat(height), alignment: .trailing)
+            .offset(x: CGFloat(feetX) - numberWidth, y: CGFloat(top))
+        touchText("'", x: feetX + 18, y: top - 12, size: CGFloat(height) * 0.36)
+        Text(inchText)
+            .font(.system(size: CGFloat(height) * 0.65, weight: .regular, design: .rounded))
+            .foregroundStyle(OLEDTheme.pixel)
+            .lineLimit(1)
+            .minimumScaleFactor(0.55)
+            .frame(width: inchWidth, height: CGFloat(height), alignment: .trailing)
+            .offset(x: CGFloat(inchX), y: CGFloat(top))
+        touchText("\"", x: inchX + Int(inchWidth) + 10, y: top - 12, size: CGFloat(height) * 0.36)
+    }
+    .opacity(distanceLocked && !lockedVisible ? 0 : 1)
+}
+
+private func lockedDistanceVisible(at date: Date) -> Bool {
+        !distanceLocked || date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.0) < 0.5
+    }
+
+    private var touchBorder: some View {
+        Rectangle()
+            .fill(Color.clear)
+            .frame(width: 450, height: 600)
+    }
+
+    private func touchHeader(_ title: String) -> some View {
+        ZStack(alignment: .topLeading) {
+            Text(title)
+                .font(.system(size: 26, weight: .regular, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.75))
+                .frame(width: 450, alignment: .center)
+                .offset(x: 0, y: 72)
+        }
+    }
+
+    private func touchText(_ text: String, x: Int, y: Int, size: CGFloat, color: Color = OLEDTheme.pixel) -> some View {
+        Text(text)
+            .font(.system(size: size, weight: .semibold, design: .monospaced))
+            .foregroundStyle(color)
+            .lineLimit(1)
+            .minimumScaleFactor(0.55)
+            .fixedSize()
+            .offset(x: CGFloat(x), y: CGFloat(y))
+    }
+
+    private func touchRightText(_ text: String, y: Int, size: CGFloat) -> some View {
+        touchText(text, x: 426 - touchTextWidth(text, size: size), y: y, size: size)
+    }
+
+    private func touchMenuRow(_ text: String, y: Int) -> some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(red: 0.06, green: 0.08, blue: 0.06))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(OLEDTheme.dim, lineWidth: 1.8))
+                .frame(width: 362, height: 62)
+                .offset(x: 44, y: CGFloat(y))
+            Text(text)
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundStyle(OLEDTheme.pixel)
+                .frame(width: 342, height: 62, alignment: .center)
+                .offset(x: 54, y: CGFloat(y))
+        }
+    }
+
+    private func touchDistancePreviewBox(x: Int, y: Int, width: Int, height: Int) -> some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(red: 0.02, green: 0.02, blue: 0.02))
+                .overlay(RoundedRectangle(cornerRadius: 18).stroke(OLEDTheme.dim, lineWidth: 1.6))
+                .frame(width: CGFloat(width), height: CGFloat(height))
+                .offset(x: CGFloat(x), y: CGFloat(y))
+            Text(currentSourceDistanceText)
+                .font(.system(size: 42, weight: .regular, design: .rounded))
+                .foregroundStyle(OLEDTheme.pixel)
+                .lineLimit(1)
+                .minimumScaleFactor(0.55)
+                .frame(width: CGFloat(width - 28), height: CGFloat(height), alignment: .center)
+                .offset(x: CGFloat(x + 14), y: CGFloat(y))
+        }
+    }
+
+    private func touchBigButton(_ text: String, x: Int, y: Int, height: Int = 110) -> some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color(red: 0.06, green: 0.08, blue: 0.06))
+                .overlay(RoundedRectangle(cornerRadius: 22).stroke(OLEDTheme.dim, lineWidth: 1.8))
+                .frame(width: 108, height: CGFloat(height))
+                .offset(x: CGFloat(x), y: CGFloat(y))
+            Text(text)
+                .font(.system(size: 30, weight: .regular, design: .rounded))
+                .foregroundStyle(OLEDTheme.pixel)
+                .frame(width: 108, height: CGFloat(height), alignment: .center)
+                .offset(x: CGFloat(x), y: CGFloat(y))
+        }
+    }
+
+
+    private func touchCardRow(_ label: String, value: String, y: Int, valueColor: Color = OLEDTheme.pixel, compact: Bool = false) -> some View {
+        let rowHeight = compact ? 48 : 74
+        let labelSize: CGFloat = compact ? 18 : 20
+        let valueSize: CGFloat = compact ? 21 : 27
+        return ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(red: 0.04, green: 0.07, blue: 0.04))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(OLEDTheme.dim, lineWidth: 1.4))
+                .frame(width: 354, height: CGFloat(rowHeight))
+                .offset(x: 48, y: CGFloat(y))
+            Text(label)
+                .font(.system(size: labelSize, weight: .semibold, design: .rounded))
+                .foregroundStyle(OLEDTheme.dim)
+                .frame(width: 140, height: CGFloat(rowHeight), alignment: .leading)
+                .offset(x: 68, y: CGFloat(y))
+            Text(value)
+                .font(.system(size: valueSize, weight: .regular, design: .rounded))
+                .foregroundStyle(valueColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.55)
+                .frame(width: 166, height: CGFloat(rowHeight), alignment: .trailing)
+                .offset(x: 216, y: CGFloat(y))
+        }
+    }
+
+    private func touchInfoRow(_ label: String, value: String, y: Int, valueColor: Color = OLEDTheme.pixel) -> some View {
+        ZStack(alignment: .topLeading) {
+            touchText(label, x: 52, y: y, size: 24, color: OLEDTheme.dim)
+            touchText(value, x: 244, y: y, size: 24, color: valueColor)
+        }
+    }
+
+    private func touchTextWidth(_ text: String, size: CGFloat) -> Int {
+        Int(CGFloat(text.count) * size * 0.62)
+    }
+
+    private func formatDistance(_ inches: Int) -> String {
+        "\(max(0, inches) / 12)' \(max(0, inches) % 12)\""
+    }
+
+    private func touchBoltIcon(x: Int, y: Int) -> some View {
+        Image(systemName: "bolt.fill")
+            .font(.system(size: 26, weight: .bold))
+            .foregroundStyle(OLEDTheme.pixel)
+            .frame(width: 26, height: 30)
+            .offset(x: CGFloat(x), y: CGFloat(y))
+    }
+
+
+    private func touchLockIcon(x: Int, y: Int) -> some View {
+        ZStack(alignment: .topLeading) {
+            if distanceLocked {
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .stroke(OLEDTheme.pixel, lineWidth: 1.5)
+                    .frame(width: 14, height: 13)
+                    .offset(x: CGFloat(x + 3), y: CGFloat(y))
+                Rectangle()
+                    .fill(OLEDTheme.pixel)
+                    .frame(width: 18, height: 14)
+                    .offset(x: CGFloat(x + 1), y: CGFloat(y + 10))
+                Circle()
+                    .fill(Color.black)
+                    .frame(width: 4, height: 4)
+                    .offset(x: CGFloat(x + 8), y: CGFloat(y + 14))
+            }
+        }
+        .frame(width: 26, height: 30, alignment: .topLeading)
+        .offset(x: CGFloat(x), y: CGFloat(y))
+    }
+
+    private func touchMenuIcon(x: Int, y: Int) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            RoundedRectangle(cornerRadius: 1).frame(width: 26, height: 3)
+            RoundedRectangle(cornerRadius: 1).frame(width: 26, height: 3)
+            RoundedRectangle(cornerRadius: 1).frame(width: 26, height: 3)
+        }
+        .foregroundStyle(OLEDTheme.pixel)
+        .offset(x: CGFloat(x), y: CGFloat(y))
+    }
+
+    private func touchBackPill() -> some View {
+        touchHomePill("BACK", x: 24, y: 24, width: 82, height: 42, fontSize: 17)
+    }
+
+    private func touchRoutePill(x: Int, y: Int, width: Int, height: Int) -> some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(ble.linkOK ? Color(red: 0.05, green: 0.38, blue: 0.16) : OLEDTheme.danger.opacity(0.72))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(OLEDTheme.dim, lineWidth: 1.8))
+                .frame(width: CGFloat(width), height: CGFloat(height))
+                .offset(x: CGFloat(x), y: CGFloat(y))
+            Text(tagSourceActive ? "TAG" : "TX")
+                .font(.system(size: max(19, CGFloat(height) * 0.52), weight: .bold, design: .rounded))
+                .foregroundStyle(Color.white)
+                .frame(width: CGFloat(width), height: CGFloat(height), alignment: .center)
+                .offset(x: CGFloat(x), y: CGFloat(y))
+        }
+    }
+
+    private func touchSourceDetailLabel(x: Int, y: Int, width: Int, fontSize: CGFloat) -> some View {
+        Text(homeSourceDetailLabel)
+            .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+            .foregroundStyle(homeSourceDetailColor)
+            .lineLimit(1)
+            .minimumScaleFactor(0.65)
+            .frame(width: CGFloat(width), height: 18, alignment: .center)
+            .offset(x: CGFloat(x), y: CGFloat(y))
+    }
+
+    private func touchHomePill(_ text: String, x: Int, y: Int, width: Int, height: Int = 30, fontSize: CGFloat = 18) -> some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(red: 0.07, green: 0.08, blue: 0.07))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(OLEDTheme.dim, lineWidth: 1.5))
+                .frame(width: CGFloat(width), height: CGFloat(height))
+                .offset(x: CGFloat(x), y: CGFloat(y))
+            Text(text)
+                .font(.system(size: fontSize, weight: .bold, design: .rounded))
+                .foregroundStyle(OLEDTheme.pixel)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .frame(width: CGFloat(width - 10), height: CGFloat(height), alignment: .center)
+                .offset(x: CGFloat(x + 5), y: CGFloat(y))
+        }
+    }
+
+    private func touchParametersPill(x: Int, y: Int) -> some View {
+        ZStack(alignment: .topLeading) {
+            Circle()
+                .fill(Color(red: 0.07, green: 0.08, blue: 0.07))
+                .overlay(Circle().stroke(OLEDTheme.dim, lineWidth: 1.8))
+                .frame(width: 56, height: 56)
+                .offset(x: CGFloat(x), y: CGFloat(y))
+            touchText("P", x: x + 18, y: y + 11, size: 30)
+        }
+    }
+
+    private func touchBatteryPill(x: Int, y: Int, width: Int, height: Int) -> some View {
+        let text = ble.emulatorMode && ble.emulatorBattery < 100 ? "\(ble.batteryPercent)%" : "USB"
+        let color = batteryTextColor
+        return ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color(red: 0.07, green: 0.08, blue: 0.07))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(OLEDTheme.dim, lineWidth: 1.8))
+                .frame(width: CGFloat(width), height: CGFloat(height))
+                .offset(x: CGFloat(x), y: CGFloat(y))
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(OLEDTheme.dim)
+                .frame(width: 5, height: max(16, CGFloat(height - 16)))
+                .offset(x: CGFloat(x + width), y: CGFloat(y + 8))
+            Text(text)
+                .font(.system(size: max(16, CGFloat(height) * 0.46), weight: .bold, design: .rounded))
+                .foregroundStyle(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.55)
+                .frame(width: CGFloat(width - 8), height: CGFloat(height), alignment: .center)
+                .offset(x: CGFloat(x + 4), y: CGFloat(y))
+        }
+    }
+
+    private var batteryTextColor: Color {
+        let percent = ble.emulatorMode ? ble.batteryPercent : (ble.rxBatteryPercent ?? 100)
+        if percent <= 10 { return OLEDTheme.danger }
+        if percent <= 20 { return OLEDTheme.warning }
+        return OLEDTheme.pixel
+    }
+
+    private func touchBleBars(x: Int, y: Int, percent: Int) -> some View {
+        HStack(alignment: .bottom, spacing: 4) {
+            ForEach(0..<4, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(index < max(0, min(4, Int(ceil(Double(percent) / 25.0)))) ? Color(red: 0.34, green: 0.65, blue: 1.0) : Color(red: 0.12, green: 0.14, blue: 0.18))
+                    .frame(width: 9, height: CGFloat(10 + index * 7))
+            }
+        }
+        .frame(width: 50, height: 42, alignment: .bottom)
+        .offset(x: CGFloat(x), y: CGFloat(y))
+    }
+
+    private func touchWifiIcon(x: Int, y: Int, percent: Int) -> some View {
+        let bars = max(0, min(3, Int(ceil(Double(percent) / 34.0))))
+        return ZStack(alignment: .topLeading) {
+            ForEach(0..<2, id: \.self) { index in
+                Arc(startAngle: .degrees(220), endAngle: .degrees(320), clockwise: false)
+                    .stroke(index < max(0, bars - 1) ? OLEDTheme.accentGreen : Color(red: 0.12, green: 0.16, blue: 0.12), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .frame(width: CGFloat(38 - index * 14), height: CGFloat(38 - index * 14))
+                    .offset(x: CGFloat(index * 7), y: CGFloat(index * 7))
+            }
+            Circle()
+                .fill(bars > 0 ? OLEDTheme.accentGreen : Color(red: 0.12, green: 0.16, blue: 0.12))
+                .frame(width: 7, height: 7)
+                .offset(x: 16, y: 26)
+        }
+        .frame(width: 42, height: 36)
+        .offset(x: CGFloat(x), y: CGFloat(y))
+    }
+
+    private func touchUWBIcon(x: Int, y: Int, connected: Bool) -> some View {
+        connectionSymbol(.uwb, x: x, y: y, size: 30, color: connected ? OLEDTheme.pixel : OLEDTheme.danger)
+    }
+
+    private func connectionSymbol(_ symbol: ConnectionSymbol, x: Int, y: Int, size: Int, color: Color? = nil) -> some View {
+        Group {
+            switch symbol {
+            case .ble:
+                touchBleBars(x: 0, y: 0, percent: homeSignalPercent)
+            case .wifi:
+                touchWifiIcon(x: 0, y: 0, percent: ble.linkOK ? 80 : 0)
+            case .uwb:
+                uwbWaveSymbol(color: color ?? OLEDTheme.danger)
+            }
+        }
+        .frame(width: CGFloat(size), height: CGFloat(size), alignment: .center)
+        .scaleEffect(CGFloat(size) / 36.0)
+        .offset(x: CGFloat(x), y: CGFloat(y))
+    }
+
+    private func uwbWaveSymbol(color: Color) -> some View {
+        ZStack {
+            Arc(startAngle: .degrees(210), endAngle: .degrees(330), clockwise: false)
+                .stroke(color, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .frame(width: 34, height: 34)
+            Arc(startAngle: .degrees(30), endAngle: .degrees(150), clockwise: false)
+                .stroke(color, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .frame(width: 34, height: 34)
+            Arc(startAngle: .degrees(232), endAngle: .degrees(308), clockwise: false)
+                .stroke(color, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .frame(width: 20, height: 20)
+            Arc(startAngle: .degrees(52), endAngle: .degrees(128), clockwise: false)
+                .stroke(color, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .frame(width: 20, height: 20)
+        }
+    }
+
+    private func touchParameterTimeline(x: Int, y: Int, width: Int) -> some View {
+        let height: CGFloat = 22
+        let graphWidth = CGFloat(width)
+        let iconSize: CGFloat = 16
+        let liveInches = max(0, Int((ble.currentDistanceInches + Double(currentDisplayOffset)).rounded()))
+        let maxInches = parameterGraphMaxInches(liveInches: homeDistanceLive ? liveInches : nil)
+
+        func graphX(for inches: Int) -> CGFloat {
+            let usable = max(1, width - 12)
+            let clamped = min(max(0, inches), maxInches)
+            return 6 + CGFloat(clamped) * CGFloat(usable) / CGFloat(max(1, maxInches))
+        }
+
+        func markerX(for inches: Int, markerWidth: CGFloat) -> CGFloat {
+            min(graphWidth - markerWidth - 2, max(2, graphX(for: inches) - markerWidth / 2))
+        }
+
+        return ZStack(alignment: .leading) {
+            RoundedRectangle(cornerRadius: height / 2, style: .continuous)
+                .fill(Color(red: 0.06, green: 0.06, blue: 0.06))
+                .overlay(RoundedRectangle(cornerRadius: height / 2).stroke(Color(red: 0.19, green: 0.19, blue: 0.19), lineWidth: 1))
+                .frame(width: graphWidth, height: height)
+
+            if lockoutEnabled {
+                let x1 = graphX(for: lockoutMinInches)
+                let x2 = graphX(for: max(lockoutMinInches + 1, lockoutMaxInches))
+                let blockWidth = max(CGFloat(6), x2 - x1)
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(OLEDTheme.danger.opacity(0.8))
+                    .frame(width: blockWidth, height: max(6, height - 8))
+                    .offset(x: min(graphWidth - blockWidth - 2, max(2, x1)), y: 4)
+            }
+
+            if limitsActive {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(OLEDTheme.warning)
+                    .frame(width: 5, height: height)
+                    .offset(x: markerX(for: limitMinInches, markerWidth: 5))
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(OLEDTheme.warning)
+                    .frame(width: 5, height: height)
+                    .offset(x: markerX(for: limitMaxInches, markerWidth: 5))
+            }
+
+            ForEach(Array(marks.prefix(4).enumerated()), id: \.element.id) { index, mark in
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(parameterMarkColor(index))
+                    .frame(width: 4, height: max(8, height - 6))
+                    .offset(x: markerX(for: mark.inches, markerWidth: 4), y: 3)
+            }
+
+            if homeDistanceLive {
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(Color.white)
+                    .frame(width: 6, height: height)
+                    .offset(x: markerX(for: liveInches, markerWidth: 6))
+            }
+
+            if showDistanceScaleEndpointIcons {
+                Image(systemName: "camera.fill")
+                    .font(.system(size: iconSize, weight: .semibold))
+                    .foregroundStyle(OLEDTheme.dim)
+                    .frame(width: iconSize, height: iconSize)
+                    .offset(x: -iconSize - 8, y: (height - iconSize) / 2)
+
+                Text("∞")
+                    .font(.system(size: iconSize + 2, weight: .semibold))
+                    .foregroundStyle(OLEDTheme.dim)
+                    .frame(width: iconSize + 4, height: iconSize)
+                    .offset(x: graphWidth + 8, y: (height - iconSize) / 2 - 1)
+            }
+        }
+        .offset(x: CGFloat(x), y: CGFloat(y))
+    }
+
+    private func parameterGraphMaxInches(liveInches: Int?) -> Int {
+        var maxValue = max(144, (liveInches ?? 132) + 12)
+        for mark in marks.prefix(4) {
+            maxValue = max(maxValue, mark.inches + 12)
+        }
+        if limitsActive {
+            maxValue = max(maxValue, limitMinInches + 12)
+            maxValue = max(maxValue, limitMaxInches + 12)
+        }
+        if lockoutEnabled {
+            maxValue = max(maxValue, lockoutMaxInches + 12)
+        }
+        return maxValue
+    }
+
+    private func parameterMarkColor(_ index: Int) -> Color {
+        let colors: [Color] = [
+            Color(red: 0.13, green: 0.89, blue: 0.44),
+            Color(red: 0.50, green: 0.72, blue: 1.00),
+            OLEDTheme.danger,
+            OLEDTheme.warning
+        ]
+        return colors[index % colors.count]
+    }
+
+    private func touchLimitBox(_ title: String, value: String, x: Int, y: Int) -> some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(red: 0.06, green: 0.08, blue: 0.06))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(OLEDTheme.dim, lineWidth: 1.5))
+                .frame(width: 126, height: 66)
+                .offset(x: CGFloat(x), y: CGFloat(y))
+            touchText(title, x: x + 42, y: y + 8, size: 15, color: OLEDTheme.dim)
+            touchText(value, x: x + 20, y: y + 34, size: 19)
+        }
+    }
+
+    private func touchSmallButton(_ text: String, x: Int, y: Int, width: Int = 62, height: Int = 32) -> some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(red: 0.06, green: 0.08, blue: 0.06))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(OLEDTheme.dim, lineWidth: 1.2))
+                .frame(width: CGFloat(width), height: CGFloat(height))
+                .offset(x: CGFloat(x), y: CGFloat(y))
+            Text(text)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(OLEDTheme.pixel)
+                .frame(width: CGFloat(width), height: CGFloat(height))
+                .offset(x: CGFloat(x), y: CGFloat(y))
+        }
+    }
+
+    private func connectionDetailLink(_ title: String) -> String {
+        switch title {
+        case "BLE": return ble.linkOK ? "OK" : "Scanning"
+        case "UWB": return "Searching"
+        default: return ble.emulatorMode ? "Emulator" : "Ready"
+        }
+    }
+
+    private func connectionDetailSignal(_ title: String) -> String {
+        switch title {
+        case "BLE": return "\(homeSignalPercent)%  \(max(0, min(4, Int(ceil(Double(homeSignalPercent) / 25.0)))))/4"
+        case "UWB": return "0/4"
+        default: return ble.linkOK ? "3/4" : "0/4"
+        }
+    }
+
+    private func connectionDetailColor(_ title: String) -> Color {
+        switch title {
+        case "BLE": return ble.linkOK ? OLEDTheme.pixel : OLEDTheme.warning
+        case "UWB": return OLEDTheme.warning
+        default: return OLEDTheme.pixel
+        }
+    }
+
+    private func touchSignalBars(x: Int, y: Int, percent: Int) -> some View {
+        HStack(alignment: .bottom, spacing: 3) {
+            ForEach(0..<5, id: \.self) { index in
+                let height = CGFloat(6 + index * 5)
+                Rectangle()
+                    .fill(index < max(0, min(5, Int(ceil(Double(percent) / 20.0)))) ? OLEDTheme.pixel : Color.clear)
+                    .overlay(Rectangle().stroke(OLEDTheme.pixel, lineWidth: 1))
+                    .frame(width: 9, height: height)
+            }
+        }
+        .frame(width: 58, height: 30, alignment: .bottomLeading)
+        .offset(x: CGFloat(x), y: CGFloat(y))
+    }
+
+    private func touchModeOption(_ mode: ResponseMode, y: Int) -> some View {
+        let selected = ble.responseMode == mode
+        let label = "\(mode.label) \(responseAverage(for: mode))"
+        return ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(selected ? OLEDTheme.pixel : OLEDTheme.dim, lineWidth: 1.5)
+                .frame(width: 354, height: 64)
+                .offset(x: 48, y: CGFloat(y))
+            if selected {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(OLEDTheme.pixel)
+                    .frame(width: 344, height: 54)
+                    .offset(x: 53, y: CGFloat(y + 5))
+            }
+            touchText(label, x: 225 - touchTextWidth(label, size: 30) / 2, y: y + 17, size: 30, color: selected ? .black : OLEDTheme.pixel)
         }
     }
 
@@ -564,20 +1856,16 @@ struct OLEDDisplay: View {
                     .offset(x: CGFloat(sourceLabel.count * 5 + 4), y: 1)
             }
 
-            if tagSourceActive {
-                if tagPacketActive {
-                    distanceOLED
-                } else {
-                    missingDistanceOLED
-                }
-            } else if ble.linkOK {
+            if homeDistanceLive {
                 distanceOLED
             } else {
                 missingDistanceOLED
             }
 
             oledText("OFF \(signedOffset)", x: 0, y: 55, size: 8)
-            oledText(ble.responseMode.label, x: centeredX(ble.responseMode.label) + 5, y: 55, size: 8)
+            if !tagSourceActive {
+                oledText(ble.responseMode.label, x: centeredX(ble.responseMode.label) + 5, y: 55, size: 8)
+            }
             Image(systemName: "line.3.horizontal")
                 .font(.system(size: 8, weight: .bold))
                 .foregroundStyle(OLEDTheme.pixel)
@@ -604,7 +1892,7 @@ struct OLEDDisplay: View {
             oledText(txVoltageDetailText, x: 84, y: 31, size: 8)
             oledText("RX", x: 2, y: 43, size: 8)
             oledText(rxPowerSourceText, x: 46, y: 43, size: 8)
-            oledText(rxVoltageDetailText, x: 84, y: 43, size: 8)
+            oledText(rxBatteryAmountText, x: 84, y: 43, size: 8)
             oledText("BACK", x: rightX("BACK"), y: 55, size: 8)
         }
     }
@@ -625,7 +1913,7 @@ struct OLEDDisplay: View {
     private var offsetScreen: some View {
         ZStack(alignment: .topLeading) {
             header("OFFSET")
-            oledText(ble.linkOK ? ble.displayDistance.compactDistance : "--'--\"", x: 0, y: 16, size: 16)
+            oledText(currentSourceDistanceText, x: 0, y: 16, size: 16)
             oledText("Offset: \(signedOffset)", x: 0, y: 43, size: 8)
             softLabels("+1", "-1", "0", "BACK")
         }
@@ -637,6 +1925,15 @@ struct OLEDDisplay: View {
             oledText(ble.responseMode.label, x: 0, y: 22, size: 16)
             oledText("SMP \(responseAverage) RATE \(responseRate)ms", x: 0, y: 46, size: 8)
             softLabels("NEXT", "PREV", "SAVE", "BACK")
+        }
+    }
+
+    private var themeColorScreen: some View {
+        ZStack(alignment: .topLeading) {
+            header("COLOR")
+            oledText(ble.themeColor.label, x: 0, y: 22, size: 16)
+            oledText("Use touch menu", x: 0, y: 46, size: 8)
+            softLabels("", "", "", "BACK")
         }
     }
 
@@ -656,12 +1953,42 @@ struct OLEDDisplay: View {
             header("DIAG")
             oledText("LINK", x: 0, y: 17, size: 8)
             oledText(ble.linkOK ? "OK" : "--", x: 52, y: 17, size: 8)
-            oledText("SIGNAL", x: 0, y: 28, size: 8)
-            oledText("\(ble.signalPercent)%", x: 52, y: 28, size: 8)
-            oledText("AGE", x: 0, y: 39, size: 8)
-            oledText(ble.packetAgeText, x: 52, y: 39, size: 8)
-            oledText("SENSOR", x: 0, y: 50, size: 8)
-            oledText(ble.sensorType.label, x: 52, y: 50, size: 8)
+            oledText("UWB", x: 0, y: 28, size: 8)
+            oledText(ble.uwbStatus, x: 52, y: 28, size: 8)
+            oledText("FW", x: 0, y: 39, size: 8)
+            oledText(firmwareTarget, x: 52, y: 39, size: 8)
+            oledText("FW ABOUT", x: 0, y: 50, size: 8)
+            oledText("BACK", x: rightX("BACK"), y: 55, size: 8)
+        }
+    }
+
+    private var compactFirmwareScreen: some View {
+        ZStack(alignment: .topLeading) {
+            header("FW")
+            oledText("Target \(firmwareTarget)", x: 0, y: 15, size: 8)
+            oledText("Inst \(ble.installedFirmwareVersion(for: firmwareTarget))", x: 0, y: 27, size: 8)
+            oledText("Cloud \(firmwareStatusText)", x: 0, y: 39, size: 8)
+            oledText(primaryFirmwareButtonTitle, x: 0, y: 51, size: 8)
+            oledText("BACK", x: rightX("BACK"), y: 55, size: 8)
+        }
+    }
+
+    private func compactListScreen(title: String, rows: [String]) -> some View {
+        ZStack(alignment: .topLeading) {
+            header(title)
+            ForEach(Array(rows.prefix(5).enumerated()), id: \.offset) { index, row in
+                oledText(row, x: 0, y: 14 + index * 10, size: 8)
+            }
+            oledText("BACK", x: rightX("BACK"), y: 55, size: 8)
+        }
+    }
+
+    private func compactInfoScreen(title: String, rows: [String]) -> some View {
+        ZStack(alignment: .topLeading) {
+            header(title)
+            ForEach(Array(rows.prefix(4).enumerated()), id: \.offset) { index, row in
+                oledText(row, x: 0, y: 16 + index * 11, size: 8)
+            }
             oledText("BACK", x: rightX("BACK"), y: 55, size: 8)
         }
     }
@@ -729,16 +2056,39 @@ struct OLEDDisplay: View {
 
     private var sourceLabel: String {
         if forceTXSensorLabel && ble.sensorType == .tag { return "TX" }
-        if tagSourceActive { return "TAG" }
+        if tagSourceActive { return tagNames[min(max(activeTagIndex, 0), tagNames.count - 1)] }
         if ble.emulatorMode { return "EMU" }
         if !ble.linkOK { return "TX" }
+        if !ble.sensorOK { return "TX" }
         return ble.sensorType.label
     }
 
     private var sourceLabelColor: Color {
-        if sourceLabel == "TAG" && !tagPacketActive { return OLEDTheme.danger }
+        if tagSourceActive && !tagPacketActive { return OLEDTheme.danger }
         if sourceLabel == "TX" && !ble.linkOK { return OLEDTheme.danger }
         return OLEDTheme.pixel
+    }
+
+    private var homeSourceDetailLabel: String {
+        if tagSourceActive {
+            return tagNames[min(max(activeTagIndex, 0), tagNames.count - 1)].uppercased()
+        }
+        if ble.emulatorMode {
+            return "EMU"
+        }
+        guard ble.linkOK else {
+            return "--"
+        }
+        guard ble.sensorOK else {
+            return "--"
+        }
+        return ble.sensorType.label
+    }
+
+    private var homeSourceDetailColor: Color {
+        if tagSourceActive && !tagPacketActive { return OLEDTheme.danger }
+        if !tagSourceActive && (!ble.linkOK || !ble.sensorOK) { return OLEDTheme.danger }
+        return OLEDTheme.dim
     }
 
     private var homeSignalPercent: Int {
@@ -765,20 +2115,49 @@ struct OLEDDisplay: View {
             return String(format: "%.1fV", estimatedVoltage)
         }
         guard ble.isConnected else { return "--" }
-        return "5.0V"
+        return formatMillivolts(ble.rxSystemMillivolts ?? ble.rxBusMillivolts ?? ble.rxBatteryMillivolts)
     }
 
     private var rxPowerSourceText: String {
         if ble.emulatorMode { return "BAT" }
-        return ble.isConnected ? "USB" : "--"
+        guard ble.isConnected else { return "--" }
+        return ble.rxPowerSource == "--" ? "USB" : ble.rxPowerSource
+    }
+
+    private var rxBatteryAmountText: String {
+        if ble.emulatorMode { return "\(ble.batteryPercent)%" }
+        guard ble.isConnected else { return "--" }
+        guard let percent = ble.rxBatteryPercent else { return "--" }
+        return "\(percent)%"
+    }
+
+    private var rxBatteryVoltageText: String {
+        if ble.emulatorMode { return rxVoltageDetailText }
+        guard ble.isConnected else { return "--" }
+        return formatMillivolts(ble.rxBatteryMillivolts)
+    }
+
+    private var rxUsbSystemVoltageText: String {
+        if ble.emulatorMode { return "5.0V" }
+        guard ble.isConnected else { return "--" }
+        let busText = formatMillivolts(ble.rxBusMillivolts)
+        if busText != "--" {
+            return busText
+        }
+        return formatMillivolts(ble.rxSystemMillivolts)
+    }
+
+    private func formatMillivolts(_ millivolts: UInt16?) -> String {
+        guard let millivolts, millivolts > 0 else { return "--" }
+        return String(format: "%.2fV", Double(millivolts) / 1000.0)
     }
 
     private var tagSourceActive: Bool {
-        sourceIsTag || (!ble.emulatorMode && ble.sensorType == .tag)
+        sourceIsTag
     }
 
     private var tagPacketActive: Bool {
-        ble.linkOK && ble.sensorType == .tag
+        ble.sensorOK && ble.sensorType == .tag
     }
 
     private var tagStatusText: String {
@@ -789,7 +2168,25 @@ struct OLEDDisplay: View {
 
     private var tagDistanceText: String {
         guard tagPacketActive else { return "--'--\"" }
-        return ble.displayDistance.compactDistance
+        return displayDistanceWithCurrentOffset
+    }
+
+    private var currentSourceDistanceText: String {
+        homeDistanceLive ? displayDistanceWithCurrentOffset : "--'--\""
+    }
+
+    private var activeTagSafeOffsetIndex: Int {
+        min(max(activeTagIndex, 0), max(tagOffsets.count - 1, 0))
+    }
+
+    private var currentDisplayOffset: Int16 {
+        if tagSourceActive, tagOffsets.indices.contains(activeTagSafeOffsetIndex) { return tagOffsets[activeTagSafeOffsetIndex] }
+        return ble.offsetInches
+    }
+
+    private var displayDistanceWithCurrentOffset: String {
+        let total = max(0, Int((ble.currentDistanceInches + Double(currentDisplayOffset)).rounded()))
+        return "\(total / 12)'\(total % 12)\""
     }
 
     private var showsSourceCheck: Bool {
@@ -797,12 +2194,16 @@ struct OLEDDisplay: View {
     }
 
     private var signedOffset: String {
-        "\(ble.offsetInches >= 0 ? "+" : "")\(ble.offsetInches)\""
+        "\(currentDisplayOffset >= 0 ? "+" : "")\(currentDisplayOffset)\""
     }
 
     private var distanceParts: (feet: Int, inches: Int) {
-        let total = max(0, Int((ble.currentDistanceInches + Double(ble.offsetInches)).rounded()))
+        let total = max(0, Int((ble.currentDistanceInches + Double(currentDisplayOffset)).rounded()))
         return (total / 12, total % 12)
+    }
+
+    private var homeDistanceLive: Bool {
+        tagSourceActive ? tagPacketActive : ble.sensorOK
     }
 
     private var responseAverage: Int {
@@ -823,6 +2224,14 @@ struct OLEDDisplay: View {
         }
     }
 
+    private func responseAverage(for mode: ResponseMode) -> Int {
+        switch mode {
+        case .fast: return 1
+        case .normal: return 4
+        case .avg: return 8
+        case .slow: return 12
+        }
+    }
 
     private var shortPacketCounter: String {
         if ble.packetCounter < 10000 { return "\(ble.packetCounter)" }
@@ -838,10 +2247,29 @@ struct OLEDDisplay: View {
     }
 }
 
+
+private extension ThemeColor {
+    var color: Color {
+        switch self {
+        case .white: return .white
+        case .green: return Color(red: 0.33, green: 1.0, blue: 0.18)
+        case .blue: return Color(red: 0.20, green: 0.62, blue: 1.0)
+        case .red: return Color(red: 1.0, green: 0.16, blue: 0.12)
+        case .yellow: return Color(red: 1.0, green: 0.86, blue: 0.12)
+        case .orange: return Color(red: 1.0, green: 0.48, blue: 0.10)
+        case .purple: return Color(red: 0.72, green: 0.36, blue: 1.0)
+        case .gray: return Color(red: 0.68, green: 0.68, blue: 0.72)
+        }
+    }
+}
+
 private enum OLEDTheme {
-    static let pixel = Color(red: 0.33, green: 1.0, blue: 0.18)
+    static var activePixel = Color.white
+    static var pixel: Color { activePixel }
+    static let accentGreen = Color(red: 0.33, green: 1.0, blue: 0.18)
     static let warning = Color(red: 1.0, green: 0.78, blue: 0.22)
     static let danger = Color(red: 1.0, green: 0.16, blue: 0.12)
+    static let dim = Color(white: 0.45)
 }
 
 struct ArrowKeyColumn: View {
@@ -3104,57 +4532,33 @@ private struct WiringGrid: Shape {
 struct DiagnosticsView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var ble: DigiTapeBLEManager
-    @State private var firmwareTarget = "RX"
-    @State private var selectedFirmwareID: String?
-
-    private var firmwareChoices: [FirmwareManifest.FirmwareFile] {
-        ble.availableFirmware.filter { firmwareMatchesTarget($0, target: firmwareTarget) }
-    }
-
-    private var selectedFirmware: FirmwareManifest.FirmwareFile? {
-        if let selectedFirmwareID,
-           let selected = firmwareChoices.first(where: { $0.id == selectedFirmwareID }) {
-            return selected
-        }
-        return firmwareChoices.first
-    }
-
-    private var isSelectedRouteConnected: Bool {
-        ble.connectionRoute == firmwareTarget
-    }
 
     var body: some View {
         NavigationStack {
             List {
-                Section("Firmware Update") {
-                    Picker("Target", selection: $firmwareTarget) {
-                        Label("RX", systemImage: "display").tag("RX")
-                        Label("TX", systemImage: "antenna.radiowaves.left.and.right").tag("TX")
-                    }
-                    .pickerStyle(.segmented)
-                    .disabled(ble.otaInProgress)
-                    .onChange(of: firmwareTarget) { _, _ in
-                        selectedFirmwareID = nil
-                    }
-
-                    diagRow("Installed", ble.installedFirmwareVersion(for: firmwareTarget))
-                    diagRow("Cloud", firmwareStatusText)
+                Section("Installed Firmware") {
+                    diagRow("RX", ble.installedFirmwareVersion(for: "RX"))
+                    diagRow("TX", ble.installedFirmwareVersion(for: "TX"))
+                    diagRow("Cloud", cloudStatusText)
                     if ble.otaInProgress {
                         ProgressView(value: ble.otaProgress)
                     }
+                }
 
-                    Button {
-                        if isSelectedRouteConnected {
-                            if let selectedFirmware {
-                                ble.downloadAndUpdateFirmware(selectedFirmware)
-                            }
-                        } else {
-                            ble.switchConnectionRoute(to: firmwareTarget)
+                Section("GitHub Downloads") {
+                    if ble.availableFirmware.isEmpty {
+                        Text("No firmware downloads loaded yet.")
+                            .foregroundStyle(.secondary)
+                        Button {
+                            ble.checkCloudFirmware()
+                        } label: {
+                            Label("Check GitHub", systemImage: "arrow.clockwise")
                         }
-                    } label: {
-                        Label(primaryFirmwareButtonTitle, systemImage: primaryFirmwareButtonIcon)
+                    } else {
+                        ForEach(ble.availableFirmware) { firmware in
+                            firmwareDownloadCard(firmware)
+                        }
                     }
-                    .disabled(primaryFirmwareButtonDisabled)
 
                     if ble.otaInProgress {
                         Button("Abort Update", role: .destructive) {
@@ -3163,38 +4567,17 @@ struct DiagnosticsView: View {
                     }
                 }
 
-                Section("Connection") {
-                    diagRow("Route", ble.connectionRoute)
-                    diagRow("State", ble.linkOK ? "Live" : "No data")
+                Section("Connection Debug") {
                     diagRow("Status", ble.status)
-                    diagRow("Signal", "\(ble.signalPercent)%")
+                    diagRow("Route", ble.connectionRoute)
+                    diagRow("Scan", ble.scanDebug)
                     diagRow("RSSI", "\(ble.rssi) dBm")
-                    diagRow("Sensor", ble.linkOK ? ble.sensorType.label : "--")
-                    diagRow("Packet", "\(ble.packetCounter)")
-
-                    Button {
-                        toggleConnection()
-                    } label: {
-                        Label(connectionButtonTitle, systemImage: connectionButtonIcon)
-                    }
-                    .disabled(ble.isScanning)
-
-                    Button {
-                        ble.switchConnectionRoute()
-                    } label: {
-                        Label("Switch to \(alternateRoute)", systemImage: routeIcon(for: alternateRoute))
-                    }
-                    .disabled(ble.otaInProgress)
-                }
-
-                Section("TAG / RYUW") {
+                    diagRow("Packets", "\(ble.packetCounter)")
+                    diagRow("Sensor", ble.sensorOK ? ble.sensorType.label : "--")
                     diagRow("UWB", ble.uwbStatus)
-                    diagRow("Link", ble.tagLinkText)
-                    diagRow("Route Lock", ble.txRouteLockText)
-                    diagRow("Packet Age", ble.packetAgeText)
                 }
             }
-            .navigationTitle("Diagnostics")
+            .navigationTitle("Firmware")
             .onAppear {
                 ble.checkCloudFirmwareIfNeeded()
             }
@@ -3208,69 +4591,113 @@ struct DiagnosticsView: View {
         }
     }
 
-    private var firmwareStatusText: String {
+    private var cloudStatusText: String {
         if ble.otaInProgress { return ble.otaStatus }
         if ble.isCheckingCloudFirmware { return "Checking GitHub..." }
         if ble.isDownloadingFirmware { return ble.cloudFirmwareStatus }
-        if let selectedFirmware {
-            return "\(firmwareDisplayName(selectedFirmware)) available"
-        }
         return ble.cloudFirmwareStatus
     }
 
-    private var primaryFirmwareButtonTitle: String {
-        if !isSelectedRouteConnected { return "Connect to \(firmwareTarget)" }
-        if let selectedFirmware { return "Update \(firmwareDisplayName(selectedFirmware))" }
-        if ble.isCheckingCloudFirmware { return "Checking Updates" }
-        return "No Firmware Available"
-    }
+    private func firmwareDownloadCard(_ firmware: FirmwareManifest.FirmwareFile) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label(firmware.hardware ?? firmwareDisplayName(firmware), systemImage: routeIcon(for: updateRoute(for: firmware)))
+                    .font(.headline)
+                Spacer()
+                Text(firmware.version)
+                    .font(.system(.subheadline, design: .monospaced))
+                    .fontWeight(.semibold)
+            }
 
-    private var primaryFirmwareButtonIcon: String {
-        isSelectedRouteConnected ? "icloud.and.arrow.down" : routeIcon(for: firmwareTarget)
-    }
+            Text(firmware.notes ?? "Signed DigiTape firmware build.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
 
-    private var primaryFirmwareButtonDisabled: Bool {
-        ble.otaInProgress ||
-        ble.isDownloadingFirmware ||
-        ble.isCheckingCloudFirmware ||
-        (isSelectedRouteConnected && (!ble.otaReady || selectedFirmware == nil))
-    }
+            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 6) {
+                GridRow {
+                    Text("Target").foregroundStyle(.secondary)
+                    Text(firmware.target)
+                }
+                GridRow {
+                    Text("Size").foregroundStyle(.secondary)
+                    Text(formattedByteSize(firmware.size))
+                }
+                GridRow {
+                    Text("SHA").foregroundStyle(.secondary)
+                    Text(shortHash(firmware.sha256))
+                        .font(.system(.caption, design: .monospaced))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                }
+            }
+            .font(.caption)
 
-    private var connectionButtonTitle: String {
-        if ble.isScanning { return "Scanning..." }
-        if ble.isConnected && !ble.emulatorMode { return "Disconnect" }
-        return "Connect"
-    }
+            HStack {
+                Link(destination: firmware.url) {
+                    Label(firmware.url.host ?? "GitHub", systemImage: "link")
+                }
 
-    private var connectionButtonIcon: String {
-        if ble.isScanning { return "dot.radiowaves.left.and.right" }
-        if ble.isConnected && !ble.emulatorMode { return "xmark" }
-        return "antenna.radiowaves.left.and.right"
-    }
+                Spacer()
 
-    private var alternateRoute: String {
-        ble.connectionRoute == "TX" ? "RX" : "TX"
-    }
-
-    private func toggleConnection() {
-        if ble.isConnected && !ble.emulatorMode {
-            ble.disconnect()
-        } else {
-            ble.startLiveMode()
+                Button {
+                    updateOrConnect(firmware)
+                } label: {
+                    Label(updateButtonTitle(for: firmware), systemImage: updateButtonIcon(for: firmware))
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(updateButtonDisabled(for: firmware))
+            }
+            .font(.subheadline)
         }
+        .padding(.vertical, 6)
+    }
+
+    private func resolvedFirmwareURL(_ url: URL) -> URL {
+        if url.scheme == "http" || url.scheme == "https" {
+            return url
+        }
+        guard let manifestURL = URL(string: ble.firmwareManifestURL), let resolved = URL(string: url.relativeString, relativeTo: manifestURL)?.absoluteURL else {
+            return url
+        }
+        return resolved
+    }
+
+    private func updateOrConnect(_ firmware: FirmwareManifest.FirmwareFile) {
+
+        let route = updateRoute(for: firmware)
+        if ble.connectionRoute == route {
+            ble.downloadAndUpdateFirmware(firmware)
+        } else {
+            ble.switchConnectionRouteForFirmwareUpdate(to: route)
+        }
+    }
+
+    private func updateButtonTitle(for firmware: FirmwareManifest.FirmwareFile) -> String {
+        let route = updateRoute(for: firmware)
+        if ble.connectionRoute != route { return "Connect \(route)" }
+        if ble.otaInProgress { return "Updating" }
+        return "Update"
+    }
+
+    private func updateButtonIcon(for firmware: FirmwareManifest.FirmwareFile) -> String {
+        ble.connectionRoute == updateRoute(for: firmware) ? "icloud.and.arrow.down" : routeIcon(for: updateRoute(for: firmware))
+    }
+
+    private func updateButtonDisabled(for firmware: FirmwareManifest.FirmwareFile) -> Bool {
+        if ble.otaInProgress || ble.isDownloadingFirmware || ble.isCheckingCloudFirmware { return true }
+        if ble.connectionRoute == updateRoute(for: firmware) {
+            return !ble.otaReady
+        }
+        return false
+    }
+
+    private func updateRoute(for firmware: FirmwareManifest.FirmwareFile) -> String {
+        let normalized = "\(firmware.role ?? "") \(firmware.target) \(firmware.hardware ?? "")".uppercased()
+        return normalized.contains("TX") ? "TX" : "RX"
     }
 
     private func routeIcon(for route: String) -> String {
         route == "TX" ? "antenna.radiowaves.left.and.right" : "display"
-    }
-
-    private func firmwareMatchesTarget(_ firmware: FirmwareManifest.FirmwareFile, target: String) -> Bool {
-        let normalizedTarget = target.uppercased()
-        let normalizedFirmware = firmware.target
-            .uppercased()
-            .replacingOccurrences(of: "-", with: "_")
-            .replacingOccurrences(of: " ", with: "_")
-        return normalizedFirmware == normalizedTarget || normalizedFirmware.hasPrefix("\(normalizedTarget)_")
     }
 
     private func firmwareDisplayName(_ firmware: FirmwareManifest.FirmwareFile) -> String {
@@ -3282,6 +4709,17 @@ struct DiagnosticsView: View {
             .map { word in String(word.prefix(1)).uppercased() + String(word.dropFirst()).lowercased() }
             .joined(separator: " ")
         return "\(words) \(firmware.version)"
+    }
+
+    private func formattedByteSize(_ bytes: Int?) -> String {
+        guard let bytes else { return "--" }
+        let mb = Double(bytes) / 1024.0 / 1024.0
+        return String(format: "%.1f MB", mb)
+    }
+
+    private func shortHash(_ hash: String?) -> String {
+        guard let hash, hash.count > 20 else { return hash ?? "--" }
+        return "\(hash.prefix(12))...\(hash.suffix(8))"
     }
 
     private func diagRow(_ title: String, _ value: String) -> some View {
@@ -3316,6 +4754,24 @@ struct SignalBars: View {
         if percent >= 20 { return 2 }
         if percent > 0 { return 1 }
         return 0
+    }
+}
+
+struct Arc: Shape {
+    var startAngle: Angle
+    var endAngle: Angle
+    var clockwise: Bool
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.addArc(
+            center: CGPoint(x: rect.midX, y: rect.midY),
+            radius: min(rect.width, rect.height) / 2,
+            startAngle: startAngle,
+            endAngle: endAngle,
+            clockwise: clockwise
+        )
+        return path
     }
 }
 
@@ -3356,7 +4812,7 @@ private extension ResponseMode {
         switch self {
         case .fast: return "FAST"
         case .normal: return "NORM"
-        case .avg: return "SMTH"
+        case .avg: return "SMOOTH"
         case .slow: return "SLOW"
         }
     }

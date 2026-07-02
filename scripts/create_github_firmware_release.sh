@@ -23,6 +23,18 @@ for file in "$RX_BIN" "$TX_BIN" "$MANIFEST"; do
   fi
 done
 
+SIGNED_MANIFEST="$(mktemp)"
+ruby -rjson -rdigest -e '
+  manifest_path, rx_bin, tx_bin, output_path = ARGV
+  manifest = JSON.parse(File.read(manifest_path))
+  manifest.fetch("files").each do |entry|
+    path = entry.fetch("target").upcase == "TX" ? tx_bin : rx_bin
+    entry["size"] = File.size(path)
+    entry["sha256"] = Digest::SHA256.file(path).hexdigest
+  end
+  File.write(output_path, JSON.pretty_generate(manifest) + "\n")
+' "$MANIFEST" "$RX_BIN" "$TX_BIN" "$SIGNED_MANIFEST"
+
 api="https://api.github.com/repos/$REPO/releases"
 release_json="$(mktemp)"
 
@@ -77,7 +89,7 @@ upload_asset() {
 
 upload_asset "$RX_BIN" "INSTALL_DigiTape_RX_2_1.ino.bin" "application/octet-stream"
 upload_asset "$TX_BIN" "INSTALL_DigiTape_TX_2_1.ino.bin" "application/octet-stream"
-upload_asset "$MANIFEST" "firmware-manifest.json" "application/json"
+upload_asset "$SIGNED_MANIFEST" "firmware-manifest.json" "application/json"
 
 echo "Release ready:"
 echo "https://github.com/$REPO/releases/tag/$TAG"

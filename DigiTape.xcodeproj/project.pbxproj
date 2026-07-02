@@ -14,22 +14,7 @@
 		A10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* Assets.xcassets */; };
 		A10000000000000000000006 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* LaunchScreen.storyboard */; };
 		B10000000000000000000001 /* DigiTapeWatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000001 /* DigiTapeWatchBridge.swift */; };
-		B10000000000000000000002 /* DigiTapeWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* DigiTapeWatchApp.swift */; };
-		B10000000000000000000003 /* WatchDistanceSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000003 /* WatchDistanceSession.swift */; };
-		B10000000000000000000004 /* WatchDistanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000004 /* WatchDistanceView.swift */; };
-		B10000000000000000000005 /* DigiTape Watch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = B20000000000000000000005 /* DigiTape Watch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		B10000000000000000000006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000007 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		B90000000000000000000001 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = A60000000000000000000001 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = B40000000000000000000001;
-			remoteInfo = "DigiTape Watch";
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		B50000000000000000000003 /* Embed Watch Content */ = {
@@ -38,7 +23,6 @@
 			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
 			dstSubfolderSpec = 16;
 			files = (
-				B10000000000000000000005 /* DigiTape Watch.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -51,27 +35,19 @@
 		A20000000000000000000003 /* DigiTapeBLEManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DigiTapeBLEManager.swift; sourceTree = "<group>"; };
 		A20000000000000000000004 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A20000000000000000000005 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		A20000000000000000000006 /* DigiTape.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DigiTape.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000006 /*  .app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = " .app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000007 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000000000000000000008 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		B20000000000000000000001 /* DigiTapeWatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DigiTapeWatchBridge.swift; sourceTree = "<group>"; };
 		B20000000000000000000002 /* DigiTapeWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DigiTapeWatchApp.swift; sourceTree = "<group>"; };
 		B20000000000000000000003 /* WatchDistanceSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchDistanceSession.swift; sourceTree = "<group>"; };
 		B20000000000000000000004 /* WatchDistanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchDistanceView.swift; sourceTree = "<group>"; };
-		B20000000000000000000005 /* DigiTape Watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DigiTape Watch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B20000000000000000000006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B20000000000000000000007 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A50000000000000000000002 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		B50000000000000000000002 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -108,8 +84,7 @@
 		A30000000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A20000000000000000000006 /* DigiTape.app */,
-				B20000000000000000000005 /* DigiTape Watch.app */,
+				A20000000000000000000006 /*  .app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -129,9 +104,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A40000000000000000000001 /* DigiTape */ = {
+		A40000000000000000000001 /*   */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A70000000000000000000002 /* Build configuration list for PBXNativeTarget "DigiTape" */;
+			buildConfigurationList = A70000000000000000000002 /* Build configuration list for PBXNativeTarget " " */;
 			buildPhases = (
 				A50000000000000000000001 /* Sources */,
 				A50000000000000000000002 /* Frameworks */,
@@ -142,29 +117,10 @@
 			buildRules = (
 			);
 			dependencies = (
-				B90000000000000000000002 /* PBXTargetDependency */,
 			);
-			name = DigiTape;
+			name = " ";
 			productName = DigiTapeController;
-			productReference = A20000000000000000000006 /* DigiTape.app */;
-			productType = "com.apple.product-type.application";
-		};
-		B40000000000000000000001 /* DigiTape Watch */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = B70000000000000000000001 /* Build configuration list for PBXNativeTarget "DigiTape Watch" */;
-			buildPhases = (
-				B50000000000000000000001 /* Sources */,
-				B50000000000000000000002 /* Frameworks */,
-				B50000000000000000000004 /* Resources */,
-				B50000000000000000000005 /* Clear Watch Extended Attributes */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = "DigiTape Watch";
-			productName = "DigiTape Watch";
-			productReference = B20000000000000000000005 /* DigiTape Watch.app */;
+			productReference = A20000000000000000000006 /*  .app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -178,9 +134,6 @@
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					A40000000000000000000001 = {
-						CreatedOnToolsVersion = 16.0;
-					};
-					B40000000000000000000001 = {
 						CreatedOnToolsVersion = 16.0;
 					};
 				};
@@ -198,8 +151,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A40000000000000000000001 /* DigiTape */,
-				B40000000000000000000001 /* DigiTape Watch */,
+				A40000000000000000000001 /*   */,
 			);
 		};
 /* End PBXProject section */
@@ -211,14 +163,6 @@
 			files = (
 				A10000000000000000000005 /* Assets.xcassets in Resources */,
 				A10000000000000000000006 /* LaunchScreen.storyboard in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		B50000000000000000000004 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				B10000000000000000000006 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -244,25 +188,6 @@
 			shellPath = /bin/sh;
 			shellScript = "if [ -n \"$CODESIGNING_FOLDER_PATH\" ] && [ -d \"$CODESIGNING_FOLDER_PATH\" ]; then\n  /usr/bin/xattr -cr \"$CODESIGNING_FOLDER_PATH\" || true\nfi\n";
 		};
-		B50000000000000000000005 /* Clear Watch Extended Attributes */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Clear Watch Extended Attributes";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if [ -n \"$CODESIGNING_FOLDER_PATH\" ] && [ -d \"$CODESIGNING_FOLDER_PATH\" ]; then\n  /usr/bin/xattr -cr \"$CODESIGNING_FOLDER_PATH\" || true\nfi\n";
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -278,25 +203,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		B50000000000000000000001 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				B10000000000000000000002 /* DigiTapeWatchApp.swift in Sources */,
-				B10000000000000000000003 /* WatchDistanceSession.swift in Sources */,
-				B10000000000000000000004 /* WatchDistanceView.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		B90000000000000000000002 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = B40000000000000000000001 /* DigiTape Watch */;
-			targetProxy = B90000000000000000000001 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A80000000000000000000001 /* Debug */ = {
@@ -455,57 +362,6 @@
 			};
 			name = Release;
 		};
-		B80000000000000000000001 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_STYLE = Automatic;
-				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 5P7P2UTW9S;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = DigiTapeWatch/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = DigiTape;
-				MARKETING_VERSION = 2.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.digitape.controller.watchkitapp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "watchos watchsimulator";
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 10.0;
-			};
-			name = Debug;
-		};
-		B80000000000000000000002 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 5P7P2UTW9S;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = DigiTapeWatch/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = DigiTape;
-				MARKETING_VERSION = 2.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.digitape.controller.watchkitapp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "watchos watchsimulator";
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 10.0;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -518,20 +374,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A70000000000000000000002 /* Build configuration list for PBXNativeTarget "DigiTape" */ = {
+		A70000000000000000000002 /* Build configuration list for PBXNativeTarget " " */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A80000000000000000000003 /* Debug */,
 				A80000000000000000000004 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		B70000000000000000000001 /* Build configuration list for PBXNativeTarget "DigiTape Watch" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				B80000000000000000000001 /* Debug */,
-				B80000000000000000000002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
