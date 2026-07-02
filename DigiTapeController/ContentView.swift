@@ -4601,7 +4601,7 @@ struct DiagnosticsView: View {
     private func firmwareDownloadCard(_ firmware: FirmwareManifest.FirmwareFile) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label(firmware.hardware ?? firmwareDisplayName(firmware), systemImage: routeIcon(for: updateRoute(for: firmware)))
+                Label(firmware.boardType ?? firmware.hardware ?? firmwareDisplayName(firmware), systemImage: routeIcon(for: updateRoute(for: firmware)))
                     .font(.headline)
                 Spacer()
                 Text(firmware.version)
@@ -4617,6 +4617,14 @@ struct DiagnosticsView: View {
                 GridRow {
                     Text("Target").foregroundStyle(.secondary)
                     Text(firmware.target)
+                }
+                GridRow {
+                    Text("Name").foregroundStyle(.secondary)
+                    Text(firmware.friendlyName ?? "--")
+                }
+                GridRow {
+                    Text("HW").foregroundStyle(.secondary)
+                    Text(firmware.hardwareRevision ?? "--")
                 }
                 GridRow {
                     Text("Size").foregroundStyle(.secondary)

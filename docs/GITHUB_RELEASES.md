@@ -1,49 +1,69 @@
 # GitHub Firmware Releases
 
-The iOS app checks the latest GitHub Release manifest at:
+The DigiTape app and firmware downloads page use the same manifest:
 
-`https://github.com/seanmgoode/DigiTape/releases/latest/download/firmware-manifest.json`
+`https://digitape.co/firmware/latest.json`
+
+The manifest points at the checked-in firmware package under:
+
+`docs/firmware/packages/digitape_firmware_20260702_123830/`
 
 ## Current Release
 
-Release tag:
+Release version: `3.2.1`
 
-`v2.1`
+Targets:
 
-Assets to upload:
+- `RX_MINI` - MiniRx 1.8 AMOLED
+- `RX_241` - RX 2.41 AMOLED
+- `TX` - DigiTape TX / Proto1
 
-- `INSTALL_DigiTape_RX_2_1.ino.bin`
-- `INSTALL_DigiTape_TX_2_1.ino.bin`
-- `firmware-manifest.json`
+Each firmware entry includes:
 
-The app requires each manifest entry to include `size` and `sha256`. OTA is blocked if either field is missing or if the downloaded firmware does not match.
+- `version`
+- `boardType`
+- `hardwareRevision`
+- `friendlyName`
+- `bytes`
+- `sha256`
+- `signature`
+- `signatureAlgorithm`
 
-The manifest prepared for this release is:
+The app blocks OTA if size or SHA-256 checks do not match.
 
-`docs/firmware-manifest.github-v2.1.json`
+## Website Downloads
 
-## Create With Script
+The public download page is:
 
-From the app repo folder:
+`docs/firmware/firmware.html`
+
+It links directly to the same `.ino.bin` files used by `latest.json`.
+
+## GitHub Release Upload
+
+Use the GitHub CLI when available:
 
 ```sh
-export GITHUB_TOKEN="your_token_with_repo_release_permission"
 scripts/create_github_firmware_release.sh
 ```
 
-The script generates the uploaded manifest from `docs/firmware-manifest.github-v2.1.json` and rewrites each firmware entry with the actual local binary size and SHA-256 hash before upload.
+The release should include:
+
+- `firmware-manifest.json`
+- `MiniRX1.0.ino.bin`
+- `MiniRX2.41.ino.bin`
+- `DigiTape_TX_2_0_4.ino.bin`
+
+Keep `docs/firmware/latest.json`, `docs/firmware/firmware_downloads.json`, and `docs/firmware/firmware.html` aligned whenever a new package is generated.
 
 ## Manual GitHub UI Steps
 
 1. Open `https://github.com/seanmgoode/DigiTape/releases/new`.
-2. Tag: `v2.1`.
-3. Title: `DigiTape Firmware v2.1`.
-4. Upload the RX install binaries, TX install binary, and manifest.
-5. The uploaded manifest asset must be named exactly `firmware-manifest.json`.
-6. Publish release.
-
-If creating the release manually, calculate SHA-256 for each uploaded `.bin` and add it to the matching manifest entry before upload.
+2. Tag: `firmware-v3.2.1`.
+3. Title: `DigiTape Firmware 3.2.1`.
+4. Upload the three install `.ino.bin` files and `firmware-manifest.json`.
+5. Publish release.
 
 ## Future Releases
 
-For the next release, copy the manifest, update versions, update asset URLs to the new tag, and upload it as `firmware-manifest.json` on the new release.
+For the next release, build the three targets, regenerate the package manifest with size/hash/signature fields, update `latest.json`, update `firmware.html`, then publish the GitHub release.

@@ -270,6 +270,9 @@ struct FirmwareManifest: Decodable {
         let signatureAlgorithm: String?
         let role: String?
         let hardware: String?
+        let boardType: String?
+        let hardwareRevision: String?
+        let friendlyName: String?
 
         enum CodingKeys: String, CodingKey {
             case target
@@ -287,6 +290,9 @@ struct FirmwareManifest: Decodable {
             case signatureAlgorithm
             case role
             case hardware
+            case boardType
+            case hardwareRevision
+            case friendlyName
             case label
         }
 
@@ -317,6 +323,9 @@ struct FirmwareManifest: Decodable {
             role = try container.decodeIfPresent(String.self, forKey: .role)
             hardware = try container.decodeIfPresent(String.self, forKey: .hardware)
                 ?? container.decodeIfPresent(String.self, forKey: .label)
+            boardType = try container.decodeIfPresent(String.self, forKey: .boardType)
+            hardwareRevision = try container.decodeIfPresent(String.self, forKey: .hardwareRevision)
+            friendlyName = try container.decodeIfPresent(String.self, forKey: .friendlyName)
         }
 
         var id: String { "\(target.uppercased())-\(version)-\(url.absoluteString)" }
