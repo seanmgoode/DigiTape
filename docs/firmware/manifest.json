@@ -1,0 +1,150 @@
+{
+  "created": "2026-07-02T19:38:30.694698+00:00",
+  "targets": [
+    {
+      "id": "minirx18",
+      "label": "MiniRx 1.8 AMOLED",
+      "role": "rx",
+      "fqbn": "esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,UploadMode=default,FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=enabled",
+      "sketch": "/Users/seangoode/Documents/Codex/2026-06-20/i-2/outputs/MiniRX1.0",
+      "files": [
+        "minirx18/MiniRX1.0.ino.bin",
+        "minirx18/MiniRX1.0.ino.bootloader.bin",
+        "minirx18/MiniRX1.0.ino.merged.bin",
+        "minirx18/MiniRX1.0.ino.partitions.bin"
+      ],
+      "fileDetails": [
+        {
+          "name": "MiniRX1.0.ino.bin",
+          "path": "minirx18/MiniRX1.0.ino.bin",
+          "bytes": 2243984,
+          "sha256": "c43ed3b26deafd000dbd903d818de40482dd236e16ebb4956632ae653377544c",
+          "signature": "MEYCIQCvwfhxaogzvcAMq7g+OhQ0uFUC37dMUDUU5saa9D6n8gIhAKGekYIT3BZcspGSOEkrKkxRUwUXnmfbBx+SvHWkwLw7",
+          "signatureAlgorithm": "ECDSA_P256_SHA256_DER"
+        },
+        {
+          "name": "MiniRX1.0.ino.bootloader.bin",
+          "path": "minirx18/MiniRX1.0.ino.bootloader.bin",
+          "bytes": 19984,
+          "sha256": "b41be55ae9a52aeeb21645c51b86c14027f84c2c91bf67bee6aa0e1b15d18e8b",
+          "signature": "MEUCIQC8SWkUhVIE/fbOJ/CpOYXw5PFrRKRmpijpP+6Y7W5P4gIgfbAx38gjC9Bea5aYU0z94GwhYy50Uc3IlS0ZRB0k9ws=",
+          "signatureAlgorithm": "ECDSA_P256_SHA256_DER"
+        },
+        {
+          "name": "MiniRX1.0.ino.merged.bin",
+          "path": "minirx18/MiniRX1.0.ino.merged.bin",
+          "bytes": 16777216,
+          "sha256": "9777558a6b2454eee157b423e6e71732df061e7a989d94ad281dfbd2341fa9ec",
+          "signature": "MEQCIC6ZohbUq4tOCOMkuGpQJrDRT+rxQC7ohXjkwBeUG+qyAiBZ7dj72t2uIidPAqj+3Q92mr26mCFpvuREcyXK049UGg==",
+          "signatureAlgorithm": "ECDSA_P256_SHA256_DER"
+        },
+        {
+          "name": "MiniRX1.0.ino.partitions.bin",
+          "path": "minirx18/MiniRX1.0.ino.partitions.bin",
+          "bytes": 3072,
+          "sha256": "ace02503447d0f470692e65fa76002f2d77a92dc81cd3813d8aa66718d716da9",
+          "signature": "MEUCIDs1rY0c8V91uZWHpw4Rll2xP3sHedQnS8Y6R5EMhYLzAiEAn5OvXywftmEFsU5Rqtj/2qowQq0OHf5mGWIoOcj0jjI=",
+          "signatureAlgorithm": "ECDSA_P256_SHA256_DER"
+        }
+      ]
+    },
+    {
+      "id": "rx241",
+      "label": "RX 2.41 AMOLED",
+      "role": "rx",
+      "fqbn": "esp32:esp32:esp32s3:PartitionScheme=huge_app,CDCOnBoot=cdc,PSRAM=opi,FlashSize=16M",
+      "sketch": "/Users/seangoode/Documents/Codex/2026-06-20/i-2/outputs/MiniRX2.41",
+      "files": [
+        "rx241/MiniRX2.41.ino.merged.bin",
+        "rx241/MiniRX2.41.ino.bootloader.bin",
+        "rx241/MiniRX2.41.ino.bin",
+        "rx241/MiniRX2.41.ino.partitions.bin"
+      ],
+      "fileDetails": [
+        {
+          "name": "MiniRX2.41.ino.merged.bin",
+          "path": "rx241/MiniRX2.41.ino.merged.bin",
+          "bytes": 16777216,
+          "sha256": "efd68c6c6a39cde7dbecea63b3789e5886e67a1322975744f56028cfb8d0cb7f",
+          "signature": "MEUCIFFbeSGyfir4G0OLaOFNodgJP9hZniHnFBs7Ky/3MSPpAiEA0zUfyCHSb1vdhlqLjtq/iSgy6jwh9GHNIQ+zw9fI2bo=",
+          "signatureAlgorithm": "ECDSA_P256_SHA256_DER"
+        },
+        {
+          "name": "MiniRX2.41.ino.bootloader.bin",
+          "path": "rx241/MiniRX2.41.ino.bootloader.bin",
+          "bytes": 19984,
+          "sha256": "b41be55ae9a52aeeb21645c51b86c14027f84c2c91bf67bee6aa0e1b15d18e8b",
+          "signature": "MEUCIQDlqbAAoFUHUTUkA7NLEjSGzJufQHheS9ey+2DhP30xYQIgfKCxhv4zZu/Yu+aiFe3kMI5yeunIq2EXmbpudyYTFJo=",
+          "signatureAlgorithm": "ECDSA_P256_SHA256_DER"
+        },
+        {
+          "name": "MiniRX2.41.ino.bin",
+          "path": "rx241/MiniRX2.41.ino.bin",
+          "bytes": 2258704,
+          "sha256": "7e4339ba91551f170168fcd25c7b1f8b326667f1ae2b65a6049e08aeebf0a59c",
+          "signature": "MEYCIQD3dl1sPbAJUo/xm39gXuPAFnN+aNFp0s3oZnLMF/RmJgIhAOGrfJEsBAYFwVVH/FldG/PadkGAkCMoaSE+y8mwRJfh",
+          "signatureAlgorithm": "ECDSA_P256_SHA256_DER"
+        },
+        {
+          "name": "MiniRX2.41.ino.partitions.bin",
+          "path": "rx241/MiniRX2.41.ino.partitions.bin",
+          "bytes": 3072,
+          "sha256": "aaae2888c5a6a348004b5b436f47abb25ae32e72d9003902955a998eda723edd",
+          "signature": "MEYCIQCAITM9NuXRCxcQ0+rC0Bnl1yIBUuFzBc+NWyi4jey6mQIhAMoo7L5+02CqZkmGXpeOQ2PI7+PR/dyOeqM0xSmquPG+",
+          "signatureAlgorithm": "ECDSA_P256_SHA256_DER"
+        }
+      ]
+    },
+    {
+      "id": "tx",
+      "label": "DigiTape TX",
+      "role": "tx",
+      "fqbn": "esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc",
+      "sketch": "/Users/seangoode/Documents/DigiTape/Digitape Current INOs/DigiTape_TX_2_0_4",
+      "files": [
+        "tx/DigiTape_TX_2_0_4.ino.partitions.bin",
+        "tx/DigiTape_TX_2_0_4.ino.bin",
+        "tx/DigiTape_TX_2_0_4.ino.bootloader.bin",
+        "tx/DigiTape_TX_2_0_4.ino.merged.bin"
+      ],
+      "fileDetails": [
+        {
+          "name": "DigiTape_TX_2_0_4.ino.partitions.bin",
+          "path": "tx/DigiTape_TX_2_0_4.ino.partitions.bin",
+          "bytes": 3072,
+          "sha256": "148b959cbff1c38aa8e1d5c0ba9d612c54997b945e56a63f41223eef650653a1",
+          "signature": "MEUCIDhvbe13GP21GSB6M3gjpLMilS+C2N+sDOA5ie756odBAiEAujMykH2zVAGIemUKp8ImX27wtr9PzYSiOz9bZA4MgXQ=",
+          "signatureAlgorithm": "ECDSA_P256_SHA256_DER"
+        },
+        {
+          "name": "DigiTape_TX_2_0_4.ino.bin",
+          "path": "tx/DigiTape_TX_2_0_4.ino.bin",
+          "bytes": 1162448,
+          "sha256": "2786e232b56e2d9688988ca29d8b48ad1bff9e05aa913c8082c3ad1146f3491f",
+          "signature": "MEQCIBeExLI136o31Q8xDu+DEdNSaiktD2RgK5XUST8Vxnn9AiAI8IR4mm4qlN+3e/wr6LZyQnHJuXf9TPmWUVBbpIwV0w==",
+          "signatureAlgorithm": "ECDSA_P256_SHA256_DER"
+        },
+        {
+          "name": "DigiTape_TX_2_0_4.ino.bootloader.bin",
+          "path": "tx/DigiTape_TX_2_0_4.ino.bootloader.bin",
+          "bytes": 19984,
+          "sha256": "cc521020f118145ddb9841692442976c0feda6c5969147d51fb64dca8e1e497d",
+          "signature": "MEQCIAGSwtfIz2o9HRyqDabNnmHs2F4Xv7oeLFZ38ZLrV0VhAiBpJ8xSByVMT7yuWgQT9DlMkwAfSrcnqIkXy3BpGyymDA==",
+          "signatureAlgorithm": "ECDSA_P256_SHA256_DER"
+        },
+        {
+          "name": "DigiTape_TX_2_0_4.ino.merged.bin",
+          "path": "tx/DigiTape_TX_2_0_4.ino.merged.bin",
+          "bytes": 4194304,
+          "sha256": "ce2cdcfed74af7ee80ae5554a8ebd9ee8ea5c87ca9bb510b66e337c7a1a2cebd",
+          "signature": "MEYCIQD80s8p1yT5j0t77ynxcGupyTImStK/2X6lIGja2fOfcwIhAKSgoHEnj+uQl9yd4iOsl0BXgx40N7olSC17T8Ij+HBf",
+          "signatureAlgorithm": "ECDSA_P256_SHA256_DER"
+        }
+      ]
+    }
+  ],
+  "manifestSha256": "716617e9b284303f755652b5201d480171f6c690f693d0e34bc0605b062bc0c8",
+  "manifestSignature": "MEUCIAfM23pwG9IXxF9S+xSyE9BIRDzXGFjjlRksQqquIR07AiEAnjv9O4W/iq+FNB9x+Ridnj6DWVkYacVBP3nRgHkh9K8=",
+  "signatureAlgorithm": "ECDSA_P256_SHA256_DER",
+  "publicKey": "firmware_signing_public.pem"
+}

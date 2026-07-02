@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DigiTape Firmware Downloads</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #050505; color: #f5f5f5; }
+    main { max-width: 980px; margin: 0 auto; padding: 30px; }
+    header { margin-bottom: 22px; }
+    h1 { margin: 0 0 8px; font-size: clamp(32px, 7vw, 58px); }
+    .sub { color: #9ba0a6; font-size: 18px; line-height: 1.4; }
+    .grid { display: grid; gap: 16px; }
+    .firmware-card { display: grid; gap: 16px; border: 1px solid #2f363c; background: #0c120e; border-radius: 14px; padding: 20px; }
+    .eyebrow { margin: 0 0 4px; color: #7fb7ff; font-weight: 800; letter-spacing: .06em; }
+    h2 { margin: 0 0 6px; font-size: 26px; }
+    p { margin: 0; color: #c3c7ca; }
+    dl { display: grid; gap: 8px; margin: 0; }
+    dl div { display: grid; grid-template-columns: 90px 1fr; gap: 12px; align-items: baseline; }
+    dt { color: #848b91; font-weight: 700; }
+    dd { margin: 0; overflow-wrap: anywhere; }
+    code { color: #ffd45c; }
+    a { justify-self: start; color: #050505; background: #f5f5f5; border-radius: 10px; padding: 12px 16px; text-decoration: none; font-weight: 800; }
+    .meta { margin-top: 18px; color: #777; font-size: 13px; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>DigiTape Firmware</h1>
+    <div class="sub">Download signed firmware for MiniRx 1.8, RX 2.41, and TX.</div>
+  </header>
+  <section class="grid">
+    
+      <article class="firmware-card">
+        <div>
+          <p class="eyebrow">RX</p>
+          <h2>MiniRx 1.8 AMOLED</h2>
+          <p>MiniRx 1.8 AMOLED install firmware</p>
+        </div>
+        <dl>
+          <div><dt>Target</dt><dd>minirx18</dd></div>
+          <div><dt>Size</dt><dd>2,243,984 bytes</dd></div>
+          <div><dt>SHA-256</dt><dd><code>c43ed3b26deafd000dbd903d818de40482dd236e16ebb4956632ae653377544c</code></dd></div>
+        </dl>
+        <a href="assets/MiniRX1.0.ino.bin" download>Download Firmware</a>
+      </article>
+
+      <article class="firmware-card">
+        <div>
+          <p class="eyebrow">RX</p>
+          <h2>RX 2.41 AMOLED</h2>
+          <p>RX 2.41 AMOLED install firmware</p>
+        </div>
+        <dl>
+          <div><dt>Target</dt><dd>rx241</dd></div>
+          <div><dt>Size</dt><dd>2,258,704 bytes</dd></div>
+          <div><dt>SHA-256</dt><dd><code>7e4339ba91551f170168fcd25c7b1f8b326667f1ae2b65a6049e08aeebf0a59c</code></dd></div>
+        </dl>
+        <a href="assets/MiniRX2.41.ino.bin" download>Download Firmware</a>
+      </article>
+
+      <article class="firmware-card">
+        <div>
+          <p class="eyebrow">TX</p>
+          <h2>DigiTape TX</h2>
+          <p>DigiTape TX install firmware</p>
+        </div>
+        <dl>
+          <div><dt>Target</dt><dd>tx</dd></div>
+          <div><dt>Size</dt><dd>1,162,448 bytes</dd></div>
+          <div><dt>SHA-256</dt><dd><code>2786e232b56e2d9688988ca29d8b48ad1bff9e05aa913c8082c3ad1146f3491f</code></dd></div>
+        </dl>
+        <a href="assets/DigiTape_TX_2_0_4.ino.bin" download>Download Firmware</a>
+      </article>
+
+  </section>
+  <div class="meta">
+    Manifest: packages/digitape_firmware_20260702_123830/manifest.json<br>
+    Manifest SHA-256: 12131cd9786d669b68ebc27f321fa7eff6a9a757e6b22ca7f575fd5a99fb8b48<br>
+    Generated: 2026-07-02T19:39:50.307996+00:00
+  </div>
+</main>
+</body>
+</html>
